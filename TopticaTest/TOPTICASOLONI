@@ -1,0 +1,28 @@
+from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection
+def config_DLCPRO(self):
+        DLCPRO_CONNECTION = 'COM5'
+        scandelta = 0.05 #V/s
+        scan_begin = 66.4 #V
+        scan_end = 73 #V
+        #scanningperiod = (scan_end-scan_begin)/scandelta #length of scan at 0.05 scan speed
+        with DLCpro(SerialConnection(DLCPRO_CONNECTION)) as self.DLC:
+            print("=== Connected Device, Setting Parameters for DLC ===")
+            self.DLC.laser1.scan.offset.set(70) #V
+            self.DLC.laser1.scan.amplitude.set(0) #V
+            self.DLC.laser1.wide_scan.shape.set(1) #0 is sawtooth, 1 is triangle
+            self.DLC.laser1.wide_scan.scan_begin.set(scan_begin)
+            self.DLC.laser1.wide_scan.scan_end.set(scan_end)
+            self.DLC.laser1.wide_scan.trigger.input_channel:0
+            self.DLC.laser1.wide_scan.trigger.input_enabled:1
+            print("=== Wide Scan Initiated ===")
+# NPERIODS = 25000                                                     # number of periods                                           
+# TIME_HIGH = 0.005                                                    # 5ms pulse
+# TIME_LOW = 0.005                                                     # send every 5ms
+# PERIOD = TIME_HIGH + TIME_LOW
+# #onset_times = [ (PERIOD * i) for i in range(NPERIODS) ]
+# for n in range(0, NPERIODS):
+#     self.rise = [True]
+#     if n <= NPERIODS:
+#         self.fall = [True]
+#     elif n > NPERIODS:
+#         self.fall = [False]

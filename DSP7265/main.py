@@ -17,23 +17,23 @@ class Main:
         self.TC_mod = 50E-3             # Time Constant: [s]
         self.sens_mod = 50E-3           # Sensitivity: [V]
         self.len_mod = 16384            # Storage points
-        self.STR_mod = 50E-3            # Curve buffer Storage Interval: [s/point]
+        self.STR_mod = 50E-3            # Curv......e buffer Storage Interval: [s/point]
 
         """
             2f lock-in amplifier, model DSP7265
         """
         self.l2f = L2f(8)               # GPIB address: 8
-        self.TC_2f = 5E-3               # Time Constant: [s]
-        self.sens_2f = 50E-3            # Sensitivity: [V]
+        self.TC_2f = 50E-3               # Time Constant: [s]
+        self.sens_2f = 200E-3            # Sensitivity: [V]
         self.len_2f = 16384             # Storage points
-        self.STR_2f = 5E-3              # Curve buffer Storage Interval
+        self.STR_2f = 50E-3              # Curve buffer Storage Interval
 
         """
             DC lock-in amplifier, model DSP7265
         """
         self.dc = DC(9)                 # GPIB address: 9
         self.TC_dc = 50E-3              # Time Constant: [s]
-        self.sens_dc = 50E-3            # Sensitivity: [V]
+        self.sens_dc = 500E-3           # Sensitivity: [V]
         self.len_dc = 16384             # Storage points
         self.STR_dc = 50E-3             # Curve buffer Storage Interval: [s/point]
 
@@ -94,9 +94,6 @@ class Main:
 
         return task.stop
     
-    def trigger_calc(self):
-        return
-    
     def get_lock_in_buffer(self):
         """
             Retrieving data from lock-in buffer
@@ -108,7 +105,7 @@ class Main:
         return X_mod, Y_mod, X_2f, Y_2f, X_dc, Y_dc
 
 mf = Main()
-# mf.config_lock_ins()
-# mf.init_buffer()
+mf.config_lock_ins()
+mf.init_buffer()
 mf.trigger_mea()
-# mf.get_lock_in_buffer()
+print(mf.get_lock_in_buffer())

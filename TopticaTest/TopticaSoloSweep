@@ -1,0 +1,18 @@
+from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection
+
+DLCPRO_CONNECTION = 'COM5'
+scandelta = 0.05 #V/s
+passthroughnumber = 2 #number of times to sweep through voltage range
+scan_begin = 66.4 #V
+scan_end = 73 #V
+scanningperiod = (scan_end-scan_begin)*passthroughnumber/scandelta #length of scan at 0.05 scan speed
+with DLCpro(SerialConnection(DLCPRO_CONNECTION)) as dlc:
+    print("=== Connected Device, pausing 5 seconds... Setting Parameters for DLC ===")
+    dlc.laser1.scan.offset.set(70) #V
+    dlc.laser1.scan.amplitude.set(0) #V
+    dlc.laser1.wide_scan.shape.set(1) #0 is sawtooth, 1 is triangle
+    dlc.laser1.wide_scan.scan_begin.set(scan_begin)
+    dlc.laser1.wide_scan.scan_end.set(scan_end)
+    dlc.laser1.wide_scan.duration.set(scanningperiod)
+    dlc.laser1.wide_scan._speed.set(scandelta)
+    dlc.laser1.wide_scan.start()

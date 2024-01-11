@@ -18,7 +18,7 @@ class Mod:
         self.mod.reference = "external front"                                   # Reference channel is in the front panel
 
     def filters(self, TC, sens):
-        self.mod.gain = 20                                                      # Set gain to 20 dB
+        self.mod.gain = 0                                                      # Set gain to 20 dB
         self.mod.time_constant = TC                                             # TC = 50 ms
         self.mod.slope = 24                                                     # slope of low-pass fileter in dB/octave
         self.mod.sensitivity = sens                                             # Sensitivity = 50 mV
