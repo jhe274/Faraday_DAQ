@@ -9,7 +9,7 @@ Measurement settings
 """
 rise = [True]
 fall = [False]
-scan_speed = 0.2 #V/s
+scan_speed = 0.05 #V/s
 start_voltage = 69 #V
 end_voltage = 71 #V
 scan_duration = np.abs(start_voltage - end_voltage) / scan_speed
@@ -18,7 +18,7 @@ def config_DLCPRO():
     with DLCpro(SerialConnection(DLCPRO_CONNECTION)) as DLC:
         print("=== Connected Device, Setting Parameters for DLC ===")
         # DLC.laser1.scan.amplitude.set(0) #V
-        DLC.laser1.wide_scan.stop()
+        # DLC.laser1.wide_scan.stop()
         DLC.laser1.wide_scan.output_channel.set(50)
         DLC.laser1.scan.offset.set(70) #V
         DLC.laser1.wide_scan.shape.set(0) #0 is sawtooth, 1 is triangle
@@ -32,17 +32,18 @@ def config_DLCPRO():
         DLC.laser1.wide_scan.trigger.input_channel.set(2)
 
         with nidaqmx.Task() as task:
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2") # DIO2, Toptica
             task.start()
+            print("=== Wide Scan Initiated ===")
+
             DLC.laser1.wide_scan.start()
             sleep(2)
+
             task.write(rise)
             sleep(scan_duration)
             task.write(fall)
 
             DLC.laser1.wide_scan.stop()
             task.stop()
-        
-        print("=== Wide Scan Initiated ===")
 
 config_DLCPRO()

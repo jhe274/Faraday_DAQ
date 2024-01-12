@@ -23,29 +23,29 @@ class Main:
         """
         Mod lock-in amplifier, model DSP7265
         """
-        # self.mod = Mod(7)                                                       # GPIB address: 7
-        # self.TC_mod = 50E-3                                                     # Time Constant: [s]
-        # self.sens_mod = 50E-3                                                   # Sensitivity: [V]
-        # self.len_mod = 16384                                                    # Storage points
-        # self.STR_mod = 50E-3                                                    # Curve buffer Storage Interval: [s/point]
+        self.mod = Mod(7)                                                       # GPIB address: 7
+        self.TC_mod = 50E-3                                                     # Time Constant: [s]
+        self.sens_mod = 50E-3                                                   # Sensitivity: [V]
+        self.len_mod = 16384                                                    # Storage points
+        self.STR_mod = 50E-3                                                    # Curve buffer Storage Interval: [s/point]
 
-        # """
-        # 2f lock-in amplifier, model DSP7265
-        # """
-        # self.l2f = L2f(8)                                                       # GPIB address: 8
-        # self.TC_2f = 5E-3                                                       # Time Constant: [s]
-        # self.sens_2f = 50E-3                                                    # Sensitivity: [V]
-        # self.len_2f = 16384                                                     # Storage points
-        # self.STR_2f = 5E-3                                                      # Curve buffer Storage Interval
+        """
+        2f lock-in amplifier, model DSP7265
+        """
+        self.l2f = L2f(8)                                                       # GPIB address: 8
+        self.TC_2f = 5E-3                                                       # Time Constant: [s]
+        self.sens_2f = 50E-3                                                    # Sensitivity: [V]
+        self.len_2f = 16384                                                     # Storage points
+        self.STR_2f = 5E-3                                                      # Curve buffer Storage Interval
 
-        # """
+        """
         # DC lock-in amplifier, model DSP7265
         # """
-        # self.dc = DC(9)                                                         # GPIB address: 9
-        # self.TC_dc = 50E-3                                                      # Time Constant: [s]
-        # self.sens_dc = 50E-3                                                    # Sensitivity: [V]
-        # self.len_dc = 16384                                                     # Storage points
-        # self.STR_dc = 50E-3                                                     # Curve buffer Storage Interval: [s/point]
+        self.dc = DC(9)                                                         # GPIB address: 9
+        self.TC_dc = 50E-3                                                      # Time Constant: [s]
+        self.sens_dc = 50E-3                                                    # Sensitivity: [V]
+        self.len_dc = 16384                                                     # Storage points
+        self.STR_dc = 50E-3                                                     # Curve buffer Storage Interval: [s/point]
 
         """
         Measurement settings
@@ -98,20 +98,20 @@ class Main:
         """
         Configure triple modulation lock-ins and set buffer to trigger mode
         """
-        # self.mod.filters(self.TC_mod, self.sens_mod)
-        # self.l2f.filters(self.TC_2f, self.sens_2f)
-        # self.dc.filters(self.TC_dc, self.sens_dc)
-        # self.mod.trigger_buffer()
-        # self.l2f.trigger_buffer()
-        # self.dc.trigger_buffer()
+        self.mod.filters(self.TC_mod, self.sens_mod)
+        self.l2f.filters(self.TC_2f, self.sens_2f)
+        self.dc.filters(self.TC_dc, self.sens_dc)
+        self.mod.trigger_buffer()
+        self.l2f.trigger_buffer()
+        self.dc.trigger_buffer()
     
     def init_buffer(self):
         """
         Initialize triple modulation lock-in buffers
         """
-        # self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
-        # self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
-        # self.dc.init_curve_buffer(self.len_dc, self.STR_dc)
+        self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
+        self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
+        self.dc.init_curve_buffer(self.len_dc, self.STR_dc)
 
         """
         Initialize Bristol wavelength meter buffer
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     m.config_NIcDAQ()
     m.config_Bristol()
     m.config_DLCPRO()
-    # m.config_lock_ins()
+    m.config_lock_ins()
     m.init_buffer()
     elap_time, timestamps = m.trigger_mea()
     m.get_Bristol_buffer(elap_time, timestamps)

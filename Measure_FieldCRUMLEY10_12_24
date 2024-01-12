@@ -7,6 +7,14 @@ from DSP7265.Lock_in_Mod import Mod
 from DSP7265.Lock_in_2f import L2f
 from DSP7265.Lock_in_DC import DC
 import numpy as np
+from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection
+
+scan_speed = 0.05 #V/s
+start_voltage = 69 #V
+end_voltage = 71 #V
+scan_duration = np.abs(start_voltage - end_voltage) / scan_speed
+
+DLCPRO_CONNECTION = 'COM5'
 
 class Main:
     def __init__(self):
@@ -46,14 +54,14 @@ class Main:
         """
         Measurement settings
         """
-        self.NPERIODS = 200                                                        # number of periods
+        self.NPERIODS = 3000                                                        # number of periods
         self.TIME_HIGH = 0.005                                                     # 25ms pulse
         self.TIME_LOW = 0.005                                                      # send every 25ms
         self.PERIOD = self.TIME_HIGH + self.TIME_LOW
         self.onset_times = [ (self.PERIOD * i) for i in range(self.NPERIODS) ]      # Measurement time array
         self.onset_time = self.NPERIODS * self.PERIOD                               # Measurement time
-        self.rise = [True, True]
-        self.fall = [False, False]
+        self.rise = [True, True, True]
+        self.fall = [False, False, False]
 
 
     def config_NIcDAQ(self):
@@ -66,7 +74,7 @@ class Main:
 
     def config_Bristol(self):
         """
-        Bristol wavelenght meter, model 871A-VIS4K
+        Bristol wavelength meter, model 871A-VIS4K
         """
         port_number = 'COM6'
         try:
@@ -85,6 +93,23 @@ class Main:
         print('Average method =         ', self.b.average_state('OFF'))         # Average method = OFF
         # print('Average count =          ', self.b.average_count(2))             # Number of readings to be averages = 2
         # print('Average data type =      ', self.b.average_data('WAV'))          # Average data type = wavelength
+
+    def config_DLCPRO(self):
+        
+        with DLCpro(SerialConnection(DLCPRO_CONNECTION)) as self.DLC:
+            print("=== Connected Device, Setting Parameters for DLC ===")
+            self.DLC.laser1.wide_scan.stop()
+            self.DLC.laser1.wide_scan.output_channel.set(50)
+            self.DLC.laser1.scan.offset.set(70) #V
+            self.DLC.laser1.wide_scan.shape.set(0) #0 is sawtooth, 1 is triangle
+            self.DLC.laser1.wide_scan._speed.set(scan_speed)
+            self.DLC.laser1.wide_scan.duration.set(scan_duration)
+
+            self.DLC.laser1.wide_scan.scan_begin.set(start_voltage)
+            self.DLC.laser1.wide_scan.scan_end.set(end_voltage)
+            self.DLC.laser1.wide_scan.trigger.input_enabled.set(True)
+            self.DLC.laser1.wide_scan.trigger.input_channel.set(2)
+            self.DLC.laser1.wide_scan.start()
 
     def config_lock_ins(self):
         """
@@ -111,7 +136,7 @@ class Main:
         self.b.buffer('INIT')                                                   # Initilize buffer
         self.b.buffer('OPEN')                                                   # Open buffer for data acquisition
         print('Bristol buffer initialized and opened for measurements...\n')
-
+    
     def trigger_mea(self):
         """
         Trigger logic TTL at the selected DIO channel gates
@@ -119,7 +144,8 @@ class Main:
         with nidaqmx.Task() as task:
             task.do_channels.add_do_chan("cDAQ1Mod4/port0/line0")               # DIO0: Gate12, Bristol
             task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")               # DIO1: Gate16, lock-ins
-            # task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")               # DIO2: Gate17, Toptica DLC pro
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")               # DIO2: Gate17, Toptica DLC pro
+            
             task.start()                                             # Open buffer for data acquisition
 
             i = 0
@@ -139,7 +165,7 @@ class Main:
                 timestamp_before_rise = time()
                 timestamps_before_rise.append(timestamp_before_rise)
 
-                task.write(self.rise)
+                task.write([True, True, True])
 
                 # Record timestamp after writing the rise
                 timestamp_after_rise = time()
@@ -150,21 +176,23 @@ class Main:
                 while perf_counter() - t1 < (self.TIME_HIGH):
                     pass
 
-                task.write(self.fall)
+                
+                task.write([False, False, False])
                 i = i + 1
                 print(f"\r{i:4d}", end='')
 
+            
             sleep(self.TIME_LOW)
             print()
             print(f'{self.NPERIODS} periods of {self.PERIOD} seconds')
             elap_time = perf_counter() - t0
+            # task.write([False, False, False])
             task.stop()
 
             for j in range(len(timestamps_before_rise)):
                 timestamp = (timestamps_before_rise[j] + timestamps_after_rise[j]) / 2  # Average of before and after write
                 formatted_timestamp = strftime("%Y-%m-%dT%H:%M:%S.", localtime(timestamp)) + f"{timestamp % 1:.3f}".split(".")[1]
                 timestamps.append(formatted_timestamp)
-
         return elap_time, timestamps
     
     def get_lock_in_buffer(self):
@@ -185,9 +213,15 @@ class Main:
 
 if __name__ == "__main__":
     m = Main()
+    print("sleeping for 10 seconds, get into position")
+    sleep(1)
+    print("running code now")
+    m.config_DLCPRO()
     m.config_NIcDAQ()
     m.config_Bristol()
-    # m.config_lock_ins()
+    m.config_lock_ins()
     m.init_buffer()
     elap_time, timestamps = m.trigger_mea()
     m.get_Bristol_buffer(elap_time, timestamps)
+    with DLCpro(SerialConnection(DLCPRO_CONNECTION)) as DLC:
+        DLC.laser1.wide_scan.stop()
