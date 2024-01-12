@@ -1,5 +1,4 @@
 import os
-import math
 from time import time, sleep, perf_counter, strftime, gmtime, localtime
 from datetime import datetime as dt
 import nidaqmx.system
@@ -7,8 +6,15 @@ from Bristol871.Bristol_871A import Bristol871
 from DSP7265.Lock_in_Mod import Mod
 from DSP7265.Lock_in_2f import L2f
 from DSP7265.Lock_in_DC import DC
-from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection
 import numpy as np
+from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection
+
+scan_speed = 0.05 #V/s
+start_voltage = 69 #V
+end_voltage = 71 #V
+scan_duration = np.abs(start_voltage - end_voltage) / scan_speed
+
+DLCPRO_CONNECTION = 'COM5'
 
 class Main:
     def __init__(self):
@@ -17,9 +23,7 @@ class Main:
         self.cwd = os.getcwd()
         self.dir_path = os.path.join(self.cwd, 'Faraday rotation measurements', 'Data_acquisition', 'FR_DAQ', 'Bristol871')
         self.B_file = os.path.join(self.dir_path, 'test_log.csv')
-
-
-
+        
         """
         Mod lock-in amplifier, model DSP7265
         """
@@ -39,8 +43,8 @@ class Main:
         self.STR_2f = 5E-3                                                      # Curve buffer Storage Interval
 
         """
-        # DC lock-in amplifier, model DSP7265
-        # """
+        DC lock-in amplifier, model DSP7265
+        """
         self.dc = DC(9)                                                         # GPIB address: 9
         self.TC_dc = 50E-3                                                      # Time Constant: [s]
         self.sens_dc = 50E-3                                                    # Sensitivity: [V]
@@ -50,18 +54,14 @@ class Main:
         """
         Measurement settings
         """
-        
-        self.NPERIODS = 2500                                                     # number of periods                                           
-        self.TIME_HIGH = 5                                                       # 5s pulse
-        self.TIME_LOW = 0.005                                                     # send every 5ms
+        self.NPERIODS = 3000                                                        # number of periods
+        self.TIME_HIGH = 0.005                                                     # 25ms pulse
+        self.TIME_LOW = 0.005                                                      # send every 25ms
         self.PERIOD = self.TIME_HIGH + self.TIME_LOW
-        self.onset_times = [ (self.PERIOD * i) for i in range(self.NPERIODS) ]
-        for n in range(0, self.NPERIODS):
-            self.rise = [True, True, True]
-            if n <= self.NPERIODS:
-                self.fall = [False, False, True]
-            elif n > self.NPERIODS:
-                self.fall = [False,False,False]
+        self.onset_times = [ (self.PERIOD * i) for i in range(self.NPERIODS) ]      # Measurement time array
+        self.onset_time = self.NPERIODS * self.PERIOD                               # Measurement time
+        self.rise = [True, True, True]
+        self.fall = [False, False, False]
 
 
     def config_NIcDAQ(self):
@@ -94,6 +94,23 @@ class Main:
         # print('Average count =          ', self.b.average_count(2))             # Number of readings to be averages = 2
         # print('Average data type =      ', self.b.average_data('WAV'))          # Average data type = wavelength
 
+    def config_DLCPRO(self):
+        
+        with DLCpro(SerialConnection(DLCPRO_CONNECTION)) as self.DLC:
+            print("=== Connected Device, Setting Parameters for DLC ===")
+            self.DLC.laser1.wide_scan.stop()
+            self.DLC.laser1.wide_scan.output_channel.set(50)
+            self.DLC.laser1.scan.offset.set(70) #V
+            self.DLC.laser1.wide_scan.shape.set(0) #0 is sawtooth, 1 is triangle
+            self.DLC.laser1.wide_scan._speed.set(scan_speed)
+            self.DLC.laser1.wide_scan.duration.set(scan_duration)
+
+            self.DLC.laser1.wide_scan.scan_begin.set(start_voltage)
+            self.DLC.laser1.wide_scan.scan_end.set(end_voltage)
+            self.DLC.laser1.wide_scan.trigger.input_enabled.set(True)
+            self.DLC.laser1.wide_scan.trigger.input_channel.set(2)
+            self.DLC.laser1.wide_scan.start()
+
     def config_lock_ins(self):
         """
         Configure triple modulation lock-ins and set buffer to trigger mode
@@ -119,100 +136,92 @@ class Main:
         self.b.buffer('INIT')                                                   # Initilize buffer
         self.b.buffer('OPEN')                                                   # Open buffer for data acquisition
         print('Bristol buffer initialized and opened for measurements...\n')
-
-    def config_DLCPRO(self):
-        DLCPRO_CONNECTION = 'COM5'
-        self.DLC = DLCpro(SerialConnection(DLCPRO_CONNECTION)) #PARAMS!!!
-        
-    def trig_DLCPRO(self):
-        
-        self.DLC.laser1.wide_scan.trigger.input_channel:0 #TRIGG!!
-        self.DLC.laser1.wide_scan.trigger.input_enabled:1
-        print("=== Wide Scan Initiated ===")
-
-
-
-
-
+    
     def trigger_mea(self):
-                """
-                Trigger logic TTL at the selected DIO channel gates
-                """
-                with nidaqmx.Task() as task:
-                    task.do_channels.add_do_chan("cDAQ1Mod4/port0/line0")               # DIO0: Gate12, Bristol
-                    task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")               # DIO1: Gate16, lock-ins
-                    task.do_channels.add_do_chan("cDAQ1Mod4/port0/line3")               # DIO2: Gate17, Toptica DLC pro
-                    task.start()                                             # Open buffer for data acquisition
+        """
+        Trigger logic TTL at the selected DIO channel gates
+        """
+        with nidaqmx.Task() as task:
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line0")               # DIO0: Gate12, Bristol
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")               # DIO1: Gate16, lock-ins
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")               # DIO2: Gate17, Toptica DLC pro
+            
+            task.start()                                             # Open buffer for data acquisition
 
-                    i = 0
-                    timestamps = []
-                    timestamps_before_rise = []
-                    timestamps_after_rise = []
+            i = 0
+            timestamps = []
+            timestamps_before_rise = []
+            timestamps_after_rise = []
 
-                    #
+            while i < self.NPERIODS:
+                if i == 0:
+                    t0 = perf_counter()
 
-                    while i < self.NPERIODS:
-                        if i == 0:
-                            t0 = perf_counter()
+                # wait until the start of the next period
+                while perf_counter() - t0 < self.onset_times[i]:
+                    pass
+                
+                # Record timestamp before writing the rise
+                timestamp_before_rise = time()
+                timestamps_before_rise.append(timestamp_before_rise)
 
-                        # wait until the start of the next period
-                        while perf_counter() - t0 < self.onset_times[i]:
-                            pass
-                        
-                        # Record timestamp before writing the rise
-                        timestamp_before_rise = time()
-                        timestamps_before_rise.append(timestamp_before_rise)
+                task.write([True, True, True])
 
-                        task.write(self.rise)
+                # Record timestamp after writing the rise
+                timestamp_after_rise = time()
+                timestamps_after_rise.append(timestamp_after_rise)
 
-                        # Record timestamp after writing the rise
-                        timestamp_after_rise = time()
-                        timestamps_after_rise.append(timestamp_after_rise)
+                # busy wait for 'TIME_HIGH' seconds. This should be more accurate than time.sleep(TIME_HIGH)
+                t1 = perf_counter()
+                while perf_counter() - t1 < (self.TIME_HIGH):
+                    pass
 
-                        # busy wait for 'TIME_HIGH' seconds. This should be more accurate than time.sleep(TIME_HIGH)
-                        t1 = perf_counter()
-                        while perf_counter() - t1 < (self.TIME_HIGH):
-                            pass
+                
+                task.write([False, False, False])
+                i = i + 1
+                print(f"\r{i:4d}", end='')
 
-                        task.write(self.fall)
-                        i = i + 1
-                        print(f"\r{i:4d}", end='')
+            
+            sleep(self.TIME_LOW)
+            print()
+            print(f'{self.NPERIODS} periods of {self.PERIOD} seconds')
+            elap_time = perf_counter() - t0
+            # task.write([False, False, False])
+            task.stop()
 
-                    sleep(self.TIME_LOW)
-                    print()
-                    print(f'{self.NPERIODS} periods of {self.PERIOD} seconds')
-                    elap_time = perf_counter() - t0
-                    task.stop()
-
-                    for j in range(len(timestamps_before_rise)):
-                        timestamp = (timestamps_before_rise[j] + timestamps_after_rise[j]) / 2  # Average of before and after write
-                        formatted_timestamp = strftime("%Y-%m-%dT%H:%M:%S.", localtime(timestamp)) + f"{timestamp % 1:.3f}".split(".")[1]
-                        timestamps.append(formatted_timestamp)
-
-                return elap_time, timestamps
+            for j in range(len(timestamps_before_rise)):
+                timestamp = (timestamps_before_rise[j] + timestamps_after_rise[j]) / 2  # Average of before and after write
+                formatted_timestamp = strftime("%Y-%m-%dT%H:%M:%S.", localtime(timestamp)) + f"{timestamp % 1:.3f}".split(".")[1]
+                timestamps.append(formatted_timestamp)
+        return elap_time, timestamps
     
     def get_lock_in_buffer(self):
-                """
-                Retrieve data from lock-in buffers
-                """
-                X_mod, Y_mod = self.mod.get_curve_buffer(self.sens_mod)
-                X_2f, Y_2f = self.l2f.get_curve_buffer(self.sens_2f)
-                X_dc, Y_dc = self.dc.get_curve_buffer(self.sens_dc)
+        """
+        Retrieve data from lock-in buffers
+        """
+        X_mod, Y_mod = self.mod.get_curve_buffer(self.sens_mod)
+        X_2f, Y_2f = self.l2f.get_curve_buffer(self.sens_2f)
+        X_dc, Y_dc = self.dc.get_curve_buffer(self.sens_dc)
 
-                return X_mod, Y_mod, X_2f, Y_2f, X_dc, Y_dc
+        return X_mod, Y_mod, X_2f, Y_2f, X_dc, Y_dc
     
     def get_Bristol_buffer(self, elap_t, timestamps):
-                """
-                Retrieve data from Bristol wavelength meter buffer
-                """
-                self.b.get_buffer(self.B_file, elap_t, timestamps)
+        """
+        Retrieve data from Bristol wavelength meter buffer
+        """
+        self.b.get_buffer(self.B_file, elap_t, timestamps)
 
 if __name__ == "__main__":
     m = Main()
+    print("sleeping for 10 seconds, get into position")
+    sleep(1)
+    print("running code now")
+    m.config_DLCPRO()
     m.config_NIcDAQ()
     m.config_Bristol()
-    m.config_DLCPRO()
     m.config_lock_ins()
     m.init_buffer()
     elap_time, timestamps = m.trigger_mea()
     m.get_Bristol_buffer(elap_time, timestamps)
+    with DLCpro(SerialConnection(DLCPRO_CONNECTION)) as DLC:
+        DLC.laser1.wide_scan.stop()
