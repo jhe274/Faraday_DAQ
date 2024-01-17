@@ -41,7 +41,7 @@ class L2f():
             interval corresponds to the Time/Point option in Curve Buffer Menu
             min = 1.25 ms/point, and if TC >= 5 ms, then interval = 640 micros
         """
-        print(f'Initializing {self.name} buffer...')
+        print(f'{self.name} buffer initialized.')
         self.l2f.set_buffer(points=LEN, quantities=None, interval=STR)
         self.l2f.init_curve_buffer()
     

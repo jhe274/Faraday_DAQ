@@ -163,7 +163,10 @@ class Bristol871(object):
         else:
             validate_input(command, commands, f'Buffer instruction must be one of {commands}.')
 
-    def get_buffer(self, output_file, acq_time, timestamps):
+    def get_buffer(self, output_file):
+        """
+        Get raw output from Bristol buffer
+        """
         self.buffer('CLOS')
         self.buffer('DATA?')
         print('Getting first character:', self.tn.rawq_getchar())
@@ -183,11 +186,25 @@ class Bristol871(object):
 
         #Computing number of samples
         num_samples = int(tot_bytes/20)
-
         print('Number of Samples:', num_samples)
+
+        with open(output_file, 'w') as log:
+            header = 'Index,Status,Wavelength,Intensity\n'
+            log.write(header)
+            for indx in np.arange(0, num_samples):
+                raw_data = b''.join(self.tn.rawq_getchar() for _ in range(20))
+                wvl, pwr, status, scan_indx = struct.unpack('<dfII', raw_data)
+                log.write('{},{},{:.7f},{:.3f}\n'.format(scan_indx, str(status).zfill(5), wvl, pwr))
+
+        return num_samples
+    
+    def timestamped_buffer(self, output_file, acq_time, timestamps):
+        """
+        If using external trigger method, then convert buffer index to timestamps
+        """
+        num_samples = self.get_buffer(output_file)
         print('Total time-elapsed:', acq_time)
         print('Sample Rate:', num_samples/acq_time)
-
         with open(output_file, 'w') as log:
             header = 'Timestamp,Status,Wavelength,Intensity\n'
             log.write(header)

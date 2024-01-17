@@ -10,14 +10,16 @@ from DSP7265.Lock_in_2f import L2f
 from DSP7265.Lock_in_DC import DC
 import numpy as np
 
+dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
+K_vapor = os.path.join(dir_path, 'K vapor cell')
+# Vivian = os.path.join(dir_path, 'Vivian')
+lockin_file = os.path.join(K_vapor, 'Lock-ins data', 'Lock-ins_log.lvm')
+bristol_file = os.path.join(K_vapor, 'Bristol data', 'Bristol_log.csv')
+
 class Main:
     def __init__(self):
         self.system = nidaqmx.system.System.local()
         self.system.driver_version
-        self.cwd = os.getcwd()
-        self.dir_path = os.path.join(self.cwd, 'Faraday rotation measurements', 'Data_acquisition', 'FR_DAQ', 'Bristol871')
-        self.lockin_file = os.path.join(self.dir_path, 'Lock-ins_log.csv')
-        self.B_file = os.path.join(self.dir_path, 'Bristol_log.csv')
         
         """
         TOPTICA DLC pro
@@ -28,8 +30,8 @@ class Main:
         self.ScanAmplitude = 0                                                          # [V]
         self.StartVoltage = 69                                                          # [V]
         self.EndVoltage = 71                                                            # [V]
-        self.ScanSpeed = 0.05                                                           # [V/s]
-        self.ScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed    # [s], (integer)
+        self.ScanSpeed = 0.2                                                            # [V/s]
+        self.ScanDuration = np.abs(self.StartVoltage-self.EndVoltage) / self.ScanSpeed  # [s], (integer)
         
         """
         Bristol 871A
@@ -52,7 +54,7 @@ class Main:
         self.TC_2f = 5E-3                                                               # Time Constant: [s]
         self.sens_2f = 50E-3                                                            # Sensitivity: [V]
         self.len_2f = 16384                                                             # Storage points
-        self.STR_2f = 5E-3                                                              # Curve buffer Storage Interval
+        self.STR_2f = 50E-3                                                              # Curve buffer Storage Interval: [s/point]
 
         """
         DC lock-in amplifier, model DSP7265
@@ -66,14 +68,16 @@ class Main:
         """
         Measurement settings
         """
-        self.NPERIODS = 200                                                             # number of periods
-        self.TIME_HIGH = 0.005                                                          # 25ms pulse
-        self.TIME_LOW = 0.005                                                           # send every 25ms
+        self.TIME_HIGH = 0.005                                                          # 5ms pulse
+        self.TIME_LOW = 0.005                                                           # send every 5ms
         self.PERIOD = self.TIME_HIGH + self.TIME_LOW
+        self.NPERIODS = int(self.ScanDuration / self.PERIOD)                            # number of periods
         self.onset_times = [ (self.PERIOD * i) for i in range(self.NPERIODS) ]          # Measurement time array
-        self.onset_time = self.NPERIODS * self.PERIOD                                   # Measurement time
-        self.rise = [True, True, True]
-        self.fall = [False, False, False]
+        self.INT_rise = [True, True]
+        self.INT_fall = [False, False]
+        self.EXT_rise = [True, True, True]
+        self.EXT_fall = [True, False, True]
+        self.All_fall = [False, False, False]
 
     def config_NIcDAQ(self):
         """
@@ -133,49 +137,73 @@ class Main:
         Initialize Bristol wavelength meter buffer
         """
         self.b.buffer('INIT')                                                           # Initilize buffer
-        print('Bristol buffer initialized and opened for measurements...\n')
+        print('Bristol buffer initialized.\n')
 
-    def Bristol_ext_trig(self):
+    def EXT_trig_mea(self):
         """
-        External trigger method for Bristol wavelength meter
+        External trgiger mrthod for Bristol wavelength meter during FR measurements
         """
         with nidaqmx.Task() as task:
             task.do_channels.add_do_chan("cDAQ1Mod4/port0/line0")                       # DIO0: Gate12, Bristol
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")                       # DIO1: Gate16, lock-ins
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")                       # DIO2: Gate17, Toptica DLC pro
             task.start()
 
             i = 0
             timestamps = []
             timestamps_before_rise = []
             timestamps_after_rise = []
-            while i < self.NPERIODS:
-                if i == 0:
-                    t0 = perf_counter()
+            try:
+                with DLCpro(SerialConnection(self.dlc_port)) as dlc:
+                    dlc.laser1.wide_scan.start()
+                    print('Scan duration =          ', int(self.ScanDuration), 's')
+                    print("========== Wide Scan Initiated ==========")
 
-                # wait until the start of the next period
-                while perf_counter() - t0 < self.onset_times[i]:
-                    pass
-                
-                # Record timestamp before writing the rise
-                timestamp_before_rise = time()
-                timestamps_before_rise.append(timestamp_before_rise)
+                    # Start a 5s countdown before initiating a wide scan
+                    for i in range(5, 0, -1):
+                        print(i)
+                        sleep(1)
 
-                task.write(self.rise)
+                    while i < self.NPERIODS:
+                        if i == 0:
+                            t0 = perf_counter()
 
-                # Record timestamp after writing the rise
-                timestamp_after_rise = time()
-                timestamps_after_rise.append(timestamp_after_rise)
+                        # wait until the start of the next period
+                        while perf_counter() - t0 < self.onset_times[i]:
+                            pass
+                        
+                        # Record timestamp before writing the rise
+                        timestamp_before_rise = time()
+                        timestamps_before_rise.append(timestamp_before_rise)
 
-                # busy wait for 'TIME_HIGH' seconds. This should be more accurate than time.sleep(TIME_HIGH)
-                t1 = perf_counter()
-                while perf_counter() - t1 < (self.TIME_HIGH):
-                    pass
+                        self.b.buffer('OPEN')
+                        task.write(self.EXT_rise)
 
-                task.write(self.fall)
-                i = i + 1
-                print(f"\r{i:4d}", end='')
+                        # Record timestamp after writing the rise
+                        timestamp_after_rise = time()
+                        timestamps_after_rise.append(timestamp_after_rise)
 
-            sleep(self.TIME_LOW)
-            print()
+                        # busy wait for 'TIME_HIGH' seconds. This should be more accurate than time.sleep(TIME_HIGH)
+                        t1 = perf_counter()
+                        while perf_counter() - t1 < (self.TIME_HIGH):
+                            pass
+
+                        task.write(self.EXT_fall)
+                        i = i + 1
+                        print(f"\r{i:4d}", end='')
+
+                    sleep(self.TIME_LOW)
+                    print()
+                    self.mod.halt_buffer()
+                    self.l2f.halt_buffer()
+                    self.dc.halt_buffer()
+                    self.b.buffer('CLOS')
+                    task.write(self.All_fall)
+                    print("========== Wide Scan Completed ==========")
+                    dlc.laser1.wide_scan.stop()
+            except DeviceNotFoundError:
+                sys.stderr.write('TOPTICA DLC pro not found')
+
             print(f'{self.NPERIODS} periods of {self.PERIOD} seconds')
             elap_time = perf_counter() - t0
             task.stop()
@@ -187,66 +215,80 @@ class Main:
 
         return elap_time, timestamps
     
-    def trigger_mea(self):
+    def INT_trig_mea(self):
         """
-        Trigger logic TTL at the selected DIO channel gates
+        Internal trgiger mrthod for Bristol wavelength meter during FR measurements
         """
         with nidaqmx.Task() as task:
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line0")                       # DIO0: Gate12, Bristol
+            # Logic TTL at the selected DIO channel gates
             task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")                       # DIO1: Gate16, lock-ins
             task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")                       # DIO2: Gate17, Toptica DLC pro
-            task.start()                                                                # Open buffer for data acquisition
-            
+            task.start()
             try:
                 with DLCpro(SerialConnection(self.dlc_port)) as dlc:
                     dlc.laser1.wide_scan.start()
-                    
+                    print('Scan duration =          ', int(self.ScanDuration), 's')
+                    print("========== Wide Scan Initiated ==========")
+
                     # Start a 5s countdown before initiating a wide scan
                     for i in range(5, 0, -1):
                         print(i)
                         sleep(1)
-                    print("========== Wide Scan Initiated ==========")
-                    if self.b.trigger_method('INT') == 'INT':
-                        self.b.buffer('OPEN')                                       # Open buffer for data acquisition
-                        task.write(self.rise)
-                        sleep(self.ScanDuration)
-                        task.write(self.fall)
-                        dlc.laser1.wide_scan.stop()
-                    else:
-                        self.Bristol_ext_trig()
-                        print("========== Wide Scan Completed ==========")
-                    
+
+                    self.b.buffer('OPEN')
+                    task.write(self.INT_rise)
+                    sleep(self.ScanDuration)
+                    self.mod.halt_buffer()
+                    self.l2f.halt_buffer()
+                    self.dc.halt_buffer()
+                    self.b.buffer('CLOS')
+                    task.write(self.INT_fall)
+
+                    print("========== Wide Scan Completed ==========")
+                    dlc.laser1.wide_scan.stop()
             except DeviceNotFoundError:
-                sys.stderr.write('Device not found')
+                sys.stderr.write('TOPTICA DLC pro not found')
             
             task.stop()
-            
     
-    def get_lock_in_buffer(self):
+    def get_lock_in_buffer(self, path, filename):
         """
         Retrieve data from lock-in buffers
         """
         X_mod, Y_mod = self.mod.get_curve_buffer(self.sens_mod)
         X_2f, Y_2f = self.l2f.get_curve_buffer(self.sens_2f)
         X_dc, Y_dc = self.dc.get_curve_buffer(self.sens_dc)
+        data = [X_mod, Y_mod, X_2f, Y_2f, X_dc, Y_dc]
+        try:
+            # Check for duplicate filenames
+            original_filename = filename
+            counter = 1
+            while True:
+                file_path = os.path.join(path, filename)
+                if not os.path.isfile(file_path):
+                    break
+                # If the file already exists, add a number to the filename
+                filename = f"{original_filename}_{counter}"
+                counter += 1
 
-        with open(self.lockin_file, 'w') as log:
-            header = 'X_mod,Y_mod,X_2f,Y_2f,X_dc,Y_dc\n'
-            log.write(header)
-            for timestamp in timestamps:
-                raw_data = b''.join(self.tn.rawq_getchar() for _ in range(20))
-                wvl, pwr, status, _ = struct.unpack('<dfII', raw_data)
-                log.write('{},{},{:.7f},{:.3f}\n'.format(timestamp, str(status).zfill(5), wvl, pwr))
+            with open(file_path, "w") as file:
+                header = 'X_mod,Y_mod,X_2f,Y_2f,X_dc,Y_dc\n'
+                file.write(header)
+                # Transpose the data array to write each array to its respective column
+                for row in zip(*data):
+                    file.write(','.join(map(str, row)) + '\n')
 
-        print('Read {} measurements.'.format(len(timestamps)))
-
-        return X_mod, Y_mod, X_2f, Y_2f, X_dc, Y_dc
+        except Exception as e:
+            print(f"An error occurred while saving data to the file: {e}")
     
     def get_Bristol_buffer(self, elap_t, timestamps):
         """
         Retrieve data from Bristol wavelength meter buffer
         """
-        self.b.get_buffer(self.B_file, elap_t, timestamps)
+        if self.b.trigger_method('INT') == 'INT':
+            self.b.get_buffer(bristol_file)
+        else:
+            self.b.timestamped_buffer(bristol_file ,elap_t, timestamps)
 
 if __name__ == "__main__":
     m = Main()
@@ -255,6 +297,10 @@ if __name__ == "__main__":
     m.config_Bristol()
     m.config_lock_ins()
     m.init_buffer()
-    m.trigger_mea()
-    elap_time, timestamps = m.Bristol_ext_trig()
-    m.get_Bristol_buffer(elap_time, timestamps)
+    if m.b.trigger_method('INT') == 'INT':
+        m.INT_trig_mea()
+        m.b.get_buffer(bristol_file)
+    else:
+        elap_time, timestamps = m.EXT_trig_mea()
+        m.b.timestamped_buffer(bristol_file, elap_time, timestamps)
+    m.get_lock_in_buffer(lockin_file, lockin_file)

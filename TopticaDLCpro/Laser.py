@@ -36,4 +36,4 @@ class Laser(object):
                     dlc.laser1.wide_scan.trigger.input_enabled.set(True)                 # True -> Enable, False -> Disable
                     dlc.laser1.wide_scan.trigger.input_channel.set(2)                    # 2 -> Digital Input 2
             except DeviceNotFoundError:
-                sys.stderr.write('Device not found')
+                sys.stderr.write('TOPTICA DLC pro not found')
