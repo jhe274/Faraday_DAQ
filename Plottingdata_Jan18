@@ -7,7 +7,7 @@ import os
 dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
 K_vapor = os.path.join(dir_path, 'K vapor cell')
 lockin_path = os.path.join(K_vapor, 'Lock-ins data')
-file = os.path.join(lockin_path, 'Lock-ins_log_4.lvm')
+file = os.path.join(lockin_path, 'Lock-ins_log_5.lvm')
 
 def Lock_ins():
     '''
@@ -28,8 +28,6 @@ def Lock_ins():
 
 Xdc, Ydc, X2f, Y2f, Xmod, Ymod = Lock_ins()
 
-
-
 # Convert lists to NumPy arrays
 Xmod_array = np.array(Xmod)
 Ymod_array = np.array(Ymod)
@@ -46,16 +44,16 @@ added by bruce
 
 '''
 # Number of data points
-N = len(Xmod) 
+Nmod = Xmod.size
 
 # Sample period
-T = 100E-3 # [ms]
+T = 50E-3 # [ms]
 
 # Create a list of timestamps
-x = np.linspace(0, N*T, N)
+x = np.linspace(0, Nmod*T, Nmod)
 
 r_mod_fourier = scipy.fftpack.fft(r_mod)
-xmodf = np.fft.fftfreq(N, T)
+xmodf = np.fft.fftfreq(Nmod, T)
 ymodf = np.fft.fft(r_mod)
 
 print(len(xmodf), len(ymodf))
@@ -86,16 +84,15 @@ added by bruce
 
 '''
 # Number of data points
-N = len(X2f) 
-
+N2f = X2f.size
 # Sample period
 T = 100E-3 # [ms]
 
 # Create a list of timestamps
-x = np.linspace(0, N*T, N)
+x = np.linspace(0, N2f*T, N2f)
 
 r_2f_fourier = scipy.fftpack.fft(r_2f)
-x2ff = np.fft.fftfreq(N, T)
+x2ff = np.fft.fftfreq(N2f, T)
 y2ff = np.fft.fft(r_2f)
 
 print(len(x2ff), len(y2ff))
@@ -149,6 +146,5 @@ plt.plot(xdcf, ydcf, label='FFT')
 plt.xlim(0-(np.max(xdcf))*(0.01),np.max(xdcf)*(1.01))
 plt.xlabel('Frequency (Hz)')
 plt.legend()
-
 
 plt.show()
