@@ -13,8 +13,9 @@ import numpy as np
 dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
 K_vapor = os.path.join(dir_path, 'K vapor cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
-lockin_file = os.path.join(K_vapor, 'Lock-ins data', 'Lock-ins_log.lvm')
-bristol_file = os.path.join(K_vapor, 'Bristol data', 'Bristol_log.csv')
+lockin_path = os.path.join(K_vapor, 'Lock-ins data')
+lockin_file = f'Faraday_lockins_{dt.now().strftime("%Y-%m-%d")}.lvm'
+bristol_file = os.path.join(K_vapor, 'Bristol data', f'Bristol_{dt.now().strftime("%Y-%m-%d")}.csv')
 
 class Main:
     def __init__(self):
@@ -28,9 +29,9 @@ class Main:
         self.laser = Laser(self.dlc_port)                                                      
         self.ScanOffset = 70                                                            # [V]
         self.ScanAmplitude = 0                                                          # [V]
-        self.StartVoltage = 69                                                          # [V]
-        self.EndVoltage = 71                                                            # [V]
-        self.ScanSpeed = 0.2                                                            # [V/s]
+        self.StartVoltage = 67                                                          # [V]
+        self.EndVoltage = 73                                                            # [V]
+        self.ScanSpeed = 0.005                                                          # [V/s]
         self.ScanDuration = np.abs(self.StartVoltage-self.EndVoltage) / self.ScanSpeed  # [s], (integer)
         
         """
@@ -40,30 +41,36 @@ class Main:
 
         """
         Mod lock-in amplifier, model DSP7265
+        Reference frequency = 10 Hz
+        Harmonic = 1st
         """
         self.mod = Mod(7)                                                               # GPIB address: 7
-        self.TC_mod = 50E-3                                                             # Time Constant: [s]
-        self.sens_mod = 50E-3                                                           # Sensitivity: [V]
+        self.TC_mod = 100E-3                                                            # Time Constant: [s]
+        self.sens_mod = 100E-3                                                          # Sensitivity: [V]
         self.len_mod = 16384                                                            # Storage points
-        self.STR_mod = 50E-3                                                            # Curve buffer Storage Interval: [s/point]
+        self.STR_mod = 100E-3                                                           # Curve buffer Storage Interval: [s/point]
 
         """
         2f lock-in amplifier, model DSP7265
+        Reference frequency = 50,000 Hz
+        Harmonic = 2nd
         """
         self.l2f = L2f(8)                                                               # GPIB address: 8
-        self.TC_2f = 5E-3                                                               # Time Constant: [s]
-        self.sens_2f = 50E-3                                                            # Sensitivity: [V]
+        self.TC_2f = 50E-3                                                              # Time Constant: [s]
+        self.sens_2f = 100E-6                                                           # Sensitivity: [V]
         self.len_2f = 16384                                                             # Storage points
-        self.STR_2f = 50E-3                                                              # Curve buffer Storage Interval: [s/point]
+        self.STR_2f = 100E-3                                                            # Curve buffer Storage Interval: [s/point]
 
         """
         DC lock-in amplifier, model DSP7265
+        Reference frequency = 977 Hz
+        Harmonic = 1st
         """
         self.dc = DC(9)                                                                 # GPIB address: 9
         self.TC_dc = 50E-3                                                              # Time Constant: [s]
-        self.sens_dc = 50E-3                                                            # Sensitivity: [V]
+        self.sens_dc = 10E-6                                                            # Sensitivity: [V]
         self.len_dc = 16384                                                             # Storage points
-        self.STR_dc = 50E-3                                                             # Curve buffer Storage Interval: [s/point]
+        self.STR_dc = 100E-3                                                            # Curve buffer Storage Interval: [s/point]
 
         """
         Measurement settings
@@ -132,7 +139,7 @@ class Main:
         self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
         self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
         self.dc.init_curve_buffer(self.len_dc, self.STR_dc)
-
+        
         """
         Initialize Bristol wavelength meter buffer
         """
@@ -157,13 +164,8 @@ class Main:
                 with DLCpro(SerialConnection(self.dlc_port)) as dlc:
                     dlc.laser1.wide_scan.start()
                     print('Scan duration =          ', int(self.ScanDuration), 's')
-                    print("========== Wide Scan Initiated ==========")
-
-                    # Start a 5s countdown before initiating a wide scan
-                    for i in range(5, 0, -1):
-                        print(i)
-                        sleep(1)
-
+                    self.countdown(5)
+                    print("\n========== Wide Scan Initiated ==========")
                     while i < self.NPERIODS:
                         if i == 0:
                             t0 = perf_counter()
@@ -194,13 +196,13 @@ class Main:
 
                     sleep(self.TIME_LOW)
                     print()
-                    self.mod.halt_buffer()
-                    self.l2f.halt_buffer()
-                    self.dc.halt_buffer()
-                    self.b.buffer('CLOS')
-                    task.write(self.All_fall)
-                    print("========== Wide Scan Completed ==========")
-                    dlc.laser1.wide_scan.stop()
+                self.mod.halt_buffer()
+                self.l2f.halt_buffer()
+                self.dc.halt_buffer()
+                self.b.buffer('CLOS')
+                task.write(self.All_fall)
+                print("========== Wide Scan Completed ==========")
+                dlc.laser1.wide_scan.stop()
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
 
@@ -228,13 +230,8 @@ class Main:
                 with DLCpro(SerialConnection(self.dlc_port)) as dlc:
                     dlc.laser1.wide_scan.start()
                     print('Scan duration =          ', int(self.ScanDuration), 's')
-                    print("========== Wide Scan Initiated ==========")
-
-                    # Start a 5s countdown before initiating a wide scan
-                    for i in range(5, 0, -1):
-                        print(i)
-                        sleep(1)
-
+                    self.countdown(5)
+                    print("\n========== Wide Scan Initiated ==========")
                     self.b.buffer('OPEN')
                     task.write(self.INT_rise)
                     sleep(self.ScanDuration)
@@ -243,7 +240,6 @@ class Main:
                     self.dc.halt_buffer()
                     self.b.buffer('CLOS')
                     task.write(self.INT_fall)
-
                     print("========== Wide Scan Completed ==========")
                     dlc.laser1.wide_scan.stop()
             except DeviceNotFoundError:
@@ -255,10 +251,13 @@ class Main:
         """
         Retrieve data from lock-in buffers
         """
+        data1 = [buffer.get_curve_buffer(sensor) for buffer, sensor in zip([self.mod, self.l2f, self.dc], [self.sens_mod, self.sens_2f, self.sens_dc])]
         X_mod, Y_mod = self.mod.get_curve_buffer(self.sens_mod)
         X_2f, Y_2f = self.l2f.get_curve_buffer(self.sens_2f)
         X_dc, Y_dc = self.dc.get_curve_buffer(self.sens_dc)
         data = [X_mod, Y_mod, X_2f, Y_2f, X_dc, Y_dc]
+        print(data1)
+        print(data)
         try:
             # Check for duplicate filenames
             original_filename = filename
@@ -268,16 +267,22 @@ class Main:
                 if not os.path.isfile(file_path):
                     break
                 # If the file already exists, add a number to the filename
-                filename = f"{original_filename}_{counter}"
+                filename = f"{lockin_file.split('.')[0]}_{counter}.lvm"
                 counter += 1
-
-            with open(file_path, "w") as file:
+            with open(file_path, "w") as log:
+                log.write(f'#TC_mod[s] {self.TC_mod}\n')
+                log.write(f'#SENS_mod[V] {self.sens_mod}\n')
+                log.write(f'#TC_2f[s] {self.TC_2f}\n')
+                log.write(f'#SENS_2f[V] {self.sens_2f}\n')
+                log.write(f'#TC_dc[s] {self.TC_dc}\n')
+                log.write(f'#SENS_dc[V] {self.sens_dc}\n')
+                log.write(f'#Field Input Voltage\n')
+                log.write(f'#Preamp gain\n')
                 header = 'X_mod,Y_mod,X_2f,Y_2f,X_dc,Y_dc\n'
-                file.write(header)
+                log.write(header)
                 # Transpose the data array to write each array to its respective column
                 for row in zip(*data):
-                    file.write(','.join(map(str, row)) + '\n')
-
+                    log.write(','.join(map(str, row)) + '\n')
         except Exception as e:
             print(f"An error occurred while saving data to the file: {e}")
     
@@ -290,6 +295,11 @@ class Main:
         else:
             self.b.timestamped_buffer(bristol_file ,elap_t, timestamps)
 
+    def countdown(self, seconds):
+        for i in range(seconds, 0, -1):
+            print(f"\rWide Scan starts in:      {i} s", end="")
+            sleep(1)
+
 if __name__ == "__main__":
     m = Main()
     m.config_NIcDAQ()
@@ -297,10 +307,14 @@ if __name__ == "__main__":
     m.config_Bristol()
     m.config_lock_ins()
     m.init_buffer()
-    if m.b.trigger_method('INT') == 'INT':
-        m.INT_trig_mea()
-        m.b.get_buffer(bristol_file)
+    if (m.ScanDuration / m.STR_mod > m.len_mod) or (m.ScanDuration / m.STR_2f > m.len_2f) or (m.ScanDuration / m.STR_dc > m.len_dc):
+        print('Number of data points exceeds buffer length.')
+        pass
     else:
-        elap_time, timestamps = m.EXT_trig_mea()
-        m.b.timestamped_buffer(bristol_file, elap_time, timestamps)
-    m.get_lock_in_buffer(lockin_file, lockin_file)
+        if m.b.trigger_method('INT') == 'INT':
+            m.INT_trig_mea()
+            m.b.get_buffer(bristol_file)
+        else:
+            elap_time, timestamps = m.EXT_trig_mea()
+            m.b.timestamped_buffer(bristol_file, elap_time, timestamps)
+        m.get_lock_in_buffer(lockin_path, lockin_file)

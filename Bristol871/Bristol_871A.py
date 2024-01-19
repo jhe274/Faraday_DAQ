@@ -187,7 +187,7 @@ class Bristol871(object):
         #Computing number of samples
         num_samples = int(tot_bytes/20)
         print('Number of Samples:', num_samples)
-
+        
         with open(output_file, 'w') as log:
             header = 'Index,Status,Wavelength,Intensity\n'
             log.write(header)
