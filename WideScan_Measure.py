@@ -196,13 +196,13 @@ class Main:
 
                     sleep(self.TIME_LOW)
                     print()
-                self.mod.halt_buffer()
-                self.l2f.halt_buffer()
-                self.dc.halt_buffer()
-                self.b.buffer('CLOS')
-                task.write(self.All_fall)
-                print("========== Wide Scan Completed ==========")
-                dlc.laser1.wide_scan.stop()
+                    self.mod.halt_buffer()
+                    self.l2f.halt_buffer()
+                    self.dc.halt_buffer()
+                    self.b.buffer('CLOS')
+                    task.write(self.All_fall)
+                    print("========== Wide Scan Completed ==========")
+                    dlc.laser1.wide_scan.stop()
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
 
@@ -251,13 +251,13 @@ class Main:
         """
         Retrieve data from lock-in buffers
         """
-        data1 = [buffer.get_curve_buffer(sensor) for buffer, sensor in zip([self.mod, self.l2f, self.dc], [self.sens_mod, self.sens_2f, self.sens_dc])]
+        # data1 = [buffer.get_curve_buffer(sensor) for buffer, sensor in zip([self.mod, self.l2f, self.dc], [self.sens_mod, self.sens_2f, self.sens_dc])]
         X_mod, Y_mod = self.mod.get_curve_buffer(self.sens_mod)
         X_2f, Y_2f = self.l2f.get_curve_buffer(self.sens_2f)
         X_dc, Y_dc = self.dc.get_curve_buffer(self.sens_dc)
         data = [X_mod, Y_mod, X_2f, Y_2f, X_dc, Y_dc]
-        print(data1)
-        print(data)
+        # print(data1)
+        # print(data)
         try:
             # Check for duplicate filenames
             original_filename = filename
