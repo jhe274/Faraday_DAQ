@@ -67,7 +67,7 @@ class Main:
         Harmonic = 1st
         """
         self.dc = DC(9)                                                                 # GPIB address: 9
-        self.TC_dc = 50E-3                                                              # Time Constant: [s]
+        self.TC_dc = 500E-6                                                              # Time Constant: [s]
         self.sens_dc = 10E-6                                                            # Sensitivity: [V]
         self.len_dc = 16384                                                             # Storage points
         self.STR_dc = 100E-3                                                            # Curve buffer Storage Interval: [s/point]
