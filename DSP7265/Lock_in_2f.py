@@ -17,11 +17,11 @@ class L2f():
         self.l2f.harmonic_values = 2                                            # Reference 1st harmonic
         self.l2f.reference = "external front"                                   # Reference channel is in the front panel
 
-    def filters(self, TC, sens):
-        self.l2f.gain = 40                                                      # Set gain to 20 dB
-        self.l2f.time_constant = TC                                             # TC = 100 ms
+    def filters(self, gain, TC, sens):
+        self.l2f.gain = gain
+        self.l2f.time_constant = TC
         self.l2f.slope = 24                                                     # slope of low-pass fileter in dB/octave
-        self.l2f.sensitivity = sens                                             # Sensitivity = 200 mV
+        self.l2f.sensitivity = sens
 
     def auto_functions(self):
         self.l2f.auto_gain = 0                                                  # Auto AC Gain OFF

@@ -8,7 +8,7 @@ import os
 dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
 K_vapor = os.path.join(dir_path, 'Data_acquisition')
 lockin_path = os.path.join(K_vapor, 'FR_DAQ', 'FieldCrumley', 'Data', 'Lock-ins')
-file = os.path.join(lockin_path, 'Faraday_lockins_2024-01-19__closedhole977chopper.lvm')
+file = os.path.join(lockin_path, 'Faraday_lockins_2024-01-19_openhole2kchopper.lvm')
 
 def Lock_ins():
     '''
@@ -81,47 +81,60 @@ xdcf = np.fft.fftfreq(Ndc, T_dc)
 ydcf = np.fft.fft(r_dc)
 
 # Plot FFT and Noise for Mod, 2f, and dc lock in amp
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize = (10, 8))
-fig, (ax3, ax4) = plt.subplots(2, 1, figsize = (10,8))
+fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize = (10, 8))
 
 # Plot Noise
-ax1.plot(x_mod, r_mod, label='Mod(R)')
-ax1.plot(x_2f, r_2f, label='2f(R)')
-ax1.plot(x_dc, r_dc, label='dc(R)')
-ax1.set_xlim(x_mod[0], x_dc[-1])
-ax1.set_xlabel('Time (s)')
+ax1.plot(xmodf, np.abs(ymodf), label='FFT mod')
+ax1.set_xlim(0 - (np.max(xmodf)) * 0.01, np.max(xmodf) * 1.01)
+ax1.set_xlabel('Frequency (Hz)')
 ax1.set_ylabel('Intensity')
-ax1.set_title('Noise, lock-in amps')
+ax1.set_title('FFT, lock-in amps')
 ax1.legend()
 
-# Plot FFT
-ax2.plot(xmodf, np.abs(ymodf), label='FFT Mod')
 ax2.plot(x2ff, np.abs(y2ff), label='FFT 2f')
-ax2.plot(xdcf, np.abs(ydcf), label='FFT dc')
-ax2.set_xlim(0 - (np.max(xmodf)) * 0.01, np.max(xmodf) * 1.01)
+ax2.set_xlim(0 - (np.max(xmodf)) * 0.01, np.max(x2ff) * 1.01)
 ax2.set_xlabel('Frequency (Hz)')
 ax2.set_ylabel('Intensity')
 ax2.set_title('FFT, lock-in amps')
 ax2.legend()
 
-plt.tight_layout()
-# Plot Noise
-ax3.plot(x_mod, r_mod, label='Mod(R)')
-ax3.plot(x_2f, r_2f, label='2f(R)')
-ax3.set_xlim(x_mod[0], x_dc[-1])
-ax3.set_xlabel('Time (s)')
-ax3.set_ylabel('Intensity')
-ax3.set_title('Noise, lock-in amps')
-ax3.legend()
 
-# Plot FFT
-ax4.plot(xmodf, np.abs(ymodf), label='FFT Mod')
-ax4.plot(x2ff, np.abs(y2ff), label='FFT 2f')
-ax4.set_xlim(0 - (np.max(xmodf)) * 0.01, np.max(xmodf) * 1.01)
-ax4.set_xlabel('Frequency (Hz)')
+ax3.plot(xdcf, np.abs(ydcf), label='FFT dc')
+ax3.set_xlim(0 - (np.max(xmodf)) * 0.01, np.max(xdcf) * 1.01)
+ax3.set_xlabel('Frequency (Hz)')
+ax3.set_ylabel('Intensity')
+ax3.set_title('FFT, lock-in amps')
+ax3.legend()
+fig.suptitle(f'{os.path.basename(file)}', fontsize=16)
+
+# plt.tight_layout()
+
+# Plot Noise
+fig, (ax4, ax5, ax6) = plt.subplots(3, 1, figsize = (10,8))
+
+# Plot Noise
+ax4.plot(x_mod, r_mod, label='Mod(R)')
+ax4.set_xlim(x_mod[0], x_mod[-1])
+ax4.set_xlabel('Time (s)')
 ax4.set_ylabel('Intensity')
-ax4.set_title('FFT, lock-in amps')
+ax4.set_title('Noise, lock-in Mod amps')
 ax4.legend()
 
-plt.tight_layout()
+ax5.plot(x_2f, r_2f, label='2f(R)')
+ax5.set_xlim(x_2f[0], x_2f[-1])
+ax5.set_xlabel('Time (s)')
+ax5.set_ylabel('Intensity')
+ax5.set_title('Noise, lock-in 2f amps')
+ax5.legend()
+
+ax6.plot(x_dc, r_dc, label='dc(R)')
+ax6.set_xlim(x_dc[0], x_dc[-1])
+ax6.set_xlabel('Time (s)')
+ax6.set_ylabel('Intensity')
+ax6.set_title('Noise, lock-in dc amps')
+ax6.legend()
+fig.suptitle(f'{os.path.basename(file)}', fontsize=16)
+
+# plt.tight_layout()
+
 plt.show()

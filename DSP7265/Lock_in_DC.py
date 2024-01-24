@@ -17,11 +17,11 @@ class DC:
         self.dc.harmonic_values = 1                                             # Reference 1st harmonic
         self.dc.reference = "external front"                                    # Reference channel is in the front panel
 
-    def filters(self, TC, sens):
-        self.dc.gain = 30                                                       # Set gain to 20 dB
-        self.dc.time_constant = TC                                              # TC = 100 ms
+    def filters(self, gain, TC, sens):
+        self.dc.gain = gain
+        self.dc.time_constant = TC
         self.dc.slope = 24                                                      # slope of low-pass fileter in dB/octave
-        self.dc.sensitivity = sens                                              # Sensitivity = 10 mV
+        self.dc.sensitivity = sens
 
     def auto_functions(self):
         self.dc.auto_gain = 0                                                   # Auto AC Gain OFF

@@ -1,0 +1,159 @@
+import scipy.fftpack
+import datetime as dt
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+
+dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
+K_vapor = os.path.join(dir_path, 'Data_acquisition')
+lockin_path = os.path.join(K_vapor, 'FR_DAQ', 'FieldCrumley','Data','Lock-ins')
+file = os.path.join(lockin_path, 'Faraday_lockins_2024-01-24_3.lvm')
+
+def Lock_ins():
+    '''
+        Read lock-ins data files
+    '''
+    with open(file, 'r') as f:
+        data = pd.read_csv(file, sep=',', header=None, skiprows=9,
+                        names=['Timestamp', 'X_mod', 'Y_mod', 'X_2f', 'Y_2f', 'X_dc', 'Y_dc'])
+
+        data['Timestamp'] = pd.to_datetime(data['Timestamp'])
+        start_time = data['Timestamp'].iloc[0]
+        data['Timestamp'] = (data['Timestamp'] - start_time).dt.total_seconds()
+
+        Timestamps = data['Timestamp'].to_numpy() # [s]
+        Xdc = data['X_dc'].to_numpy()
+        Ydc = data['Y_dc'].to_numpy()
+        X2f = data['X_2f'].to_numpy()
+        Y2f = data['Y_2f'].to_numpy()
+        Xmod = data['X_mod'].to_numpy()
+        Ymod = data['Y_mod'].to_numpy()
+
+    return Timestamps, Xdc, Ydc, X2f, Y2f, Xmod, Ymod
+
+Timestamps, Xdc, Ydc, X2f, Y2f, Xmod, Ymod = Lock_ins()
+
+# Convert lists to NumPy arrays
+Xmod_array = np.array(Xmod)
+Ymod_array = np.array(Ymod)
+
+# Use NumPy element-wise squaring
+Xmodsquare = np.abs(Xmod_array)**2
+Ymodsquare = np.abs(Ymod_array)**2
+
+# Compute the magnitude using np.abs()
+r_mod = np.abs(Xmodsquare + Ymodsquare)
+
+# Number of data points
+Nmod = Xmod.size
+
+# Sample period
+T = 5E-3 # [ms]
+
+r_mod_fourier = scipy.fftpack.fft(r_mod)
+xmodf = np.fft.fftfreq(Nmod, T)
+ymodf = np.fft.fft(r_mod)
+
+fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize = (10,8))
+
+
+print(Timestamps, r_mod)
+ax1.plot(Timestamps, r_mod, label='Mod(R)')
+ax1.set_xlim(Timestamps[0], Timestamps[-1])
+ax1.set_xlabel('Time (s)')
+ax1.ylabel('Voltage (V)')
+ax1.title ('noise, modulating lock in amp')
+
+
+
+# Convert lists to NumPy arrays
+X2f_array = np.array(X2f)
+Y2f_array = np.array(Y2f)
+
+# Use NumPy element-wise squaring
+X2fsquare = np.abs(X2f_array)**2
+Y2fsquare = np.abs(Y2f_array)**2
+
+# Compute the magnitude using np.abs()
+r_2f = np.abs(X2fsquare + Y2fsquare)
+
+'''
+added by bruce
+
+'''
+# Number of data points
+N2f = X2f.size
+
+r_2f_fourier = scipy.fftpack.fft(r_2f)
+x2ff = np.fft.fftfreq(N2f, T)
+y2ff = np.fft.fft(r_2f)
+
+print(len(x2ff), len(y2ff))
+ax2.plot(Timestamps, r_2f, label='2f(R)')
+ax2.set_xlim(Timestamps[0], Timestamps[-1])
+ax2.xlabel('Time (s)')
+ax2.ylabel('Voltage (V)')
+ax2.title ('Noise, 2f lock in amp')
+
+
+
+
+# Convert lists to NumPy arrays
+Xdc_array = np.array(Xdc)
+Ydc_array = np.array(Ydc)
+
+# Use NumPy element-wise squaring
+Xdcsquare = np.abs(Xdc_array)**2
+Ydcsquare = np.abs(Ydc_array)**2
+
+# Compute the magnitude using np.abs()
+r_dc = np.abs(Xdcsquare + Ydcsquare)
+
+'''
+added by bruce
+
+'''
+
+
+r_dc_fourier = scipy.fftpack.fft(r_dc)
+xdcf = np.fft.fftfreq(N2f, T)
+ydcf = np.fft.fft(r_dc)
+
+print(len(xdcf), len(ydcf))
+
+ax3.plot(Timestamps, r_dc, label='dc(R)')
+ax3.set_xlim(Timestamps[0], Timestamps[-1])
+ax3.xlabel('Time (s)')
+ax3.ylabel('Voltage (V)')
+ax3.title ('noise, dc lock in amp')
+
+
+fig, (ax4, ax5, ax6) = plt.subplots(3, 1, figsize = (10,8))
+
+ax4.plot(xmodf, ymodf, label='FFT')
+ax4.xlim(0-(np.max(xmodf))*(0.01),np.max(xmodf)*(1.01))
+ax4.legend()
+ax4.ylabel('Amplitude (arbitrary unit)')
+ax4.xlabel('Frequency (Hz)')
+ax4.title ('FFT, modulating lock in amp')
+
+
+ax5.plot(x2ff, y2ff, label='FFT')
+ax5.xlim(0-(np.max(x2ff))*(0.01),np.max(x2ff)*(1.01))
+ax5.xlabel('Frequency (Hz)')
+ax5.ylabel('Amplitude (arbitrary unit)')
+ax5.title ('FFT, 2f lock in amp')
+ax5.legend()
+
+
+ax6.plot(xdcf, ydcf, label='FFT')
+ax6.xlim(0-(np.max(xdcf))*(0.01),np.max(xdcf)*(1.01))
+ax6.xlabel('Frequency (Hz)')
+ax6.ylabel('Amplitude (arbitrary unit)')
+ax6.title ('FFT, dc lock in amp')
+ax6.legend()
+
+
+
+plt.show()

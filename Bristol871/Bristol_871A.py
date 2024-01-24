@@ -2,6 +2,7 @@ from telnetlib import Telnet
 from serial import Serial
 import struct
 import numpy as np
+import os
 
 class Bristol871(object):
     """Class representing a Bristol 871 device.
@@ -163,7 +164,7 @@ class Bristol871(object):
         else:
             validate_input(command, commands, f'Buffer instruction must be one of {commands}.')
 
-    def get_buffer(self, output_file):
+    def get_buffer(self, path, filename, acq_time, timestamps):
         """
         Get raw output from Bristol buffer
         """
@@ -187,31 +188,25 @@ class Bristol871(object):
         #Computing number of samples
         num_samples = int(tot_bytes/20)
         print('Number of Samples:', num_samples)
-        
-        with open(output_file, 'w') as log:
-            header = 'Index,Status,Wavelength,Intensity\n'
-            log.write(header)
-            for indx in np.arange(0, num_samples):
-                raw_data = b''.join(self.tn.rawq_getchar() for _ in range(20))
-                wvl, pwr, status, scan_indx = struct.unpack('<dfII', raw_data)
-                log.write('{},{},{:.7f},{:.3f}\n'.format(scan_indx, str(status).zfill(5), wvl, pwr))
-
-        return num_samples
-    
-    def timestamped_buffer(self, output_file, acq_time, timestamps):
-        """
-        If using external trigger method, then convert buffer index to timestamps
-        """
-        num_samples = self.get_buffer(output_file)
         print('Total time-elapsed:', acq_time)
         print('Sample Rate:', num_samples/acq_time)
-        with open(output_file, 'w') as log:
-            header = 'Timestamp,Status,Wavelength,Intensity\n'
-            log.write(header)
-            for timestamp in timestamps:
-                raw_data = b''.join(self.tn.rawq_getchar() for _ in range(20))
-                wvl, pwr, status, _ = struct.unpack('<dfII', raw_data)
-                log.write('{},{},{:.7f},{:.3f}\n'.format(timestamp, str(status).zfill(5), wvl, pwr))
+        try:
+            counter = 1
+            original_filename = filename
+            while os.path.isfile(os.path.join(path, filename)):
+                filename = f"{original_filename.split('.')[0]}_{counter}.csv"
+                counter += 1
+            file_path = os.path.join(path, filename)
+                
+            with open(file_path, 'w') as log:
+                header = 'Timestamp,Status,Wavelength,Intensity\n'
+                log.write(header)
+                for timestamp in timestamps:
+                    raw_data = b''.join(self.tn.rawq_getchar() for _ in range(20))
+                    wvl, pwr, status, _ = struct.unpack('<dfII', raw_data)
+                    log.write('{},{},{:.7f},{:.3f}\n'.format(timestamp, str(status).zfill(5), wvl, pwr))
+        except Exception as e:
+            print(f"An error occurred while saving data to the file: {e}")
 
         print('Read {} measurements.'.format(len(timestamps)))
 
