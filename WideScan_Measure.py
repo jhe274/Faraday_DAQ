@@ -29,10 +29,10 @@ class Main:
         self.dlc_port = 'COM5'                                                              # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                             # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 76                                                                # [V]
+        self.ScanOffset = 69                                                                # [V]
         self.ScanAmplitude = 0                                                              # [V]
-        self.StartVoltage = 75                                                              # [V]
-        self.EndVoltage = 78                                                                # [V]
+        self.StartVoltage = 74                                                              # [V]
+        self.EndVoltage = 76                                                                # [V]
         self.ScanSpeed = 1                                                                # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed    # [s], (integer)
         self.ScanShape = 0                                                                  # 0 -> Sawtooth, 1 -> Traingle
@@ -44,7 +44,7 @@ class Main:
         self.port_Bristol = 'COM6'                                                          # Serial port number
         self.auto_expo = 'OFF'                                                              # 'ON' or 'OFF'
         self.cali_meth = 'TEMP'                                                             # 'TIME' or 'TEMP'
-        self.trig_meth = 'INT'                                                             # 'INT' or 'RISE' or 'FALL'
+        self.trig_meth = 'INT'                                                              # 'INT' or 'RISE' or 'FALL'
         self.fram_rate = 250                                                                # [Hz]
         self.aver_stat = 'OFF'                                                              # 'ON' or 'OFF'
         self.aver_type = 'WAV'
@@ -56,11 +56,11 @@ class Main:
         Harmonic = 1st
         """
         self.mod = Mod(7)                                                                   # GPIB address: 7
-        self.gain_mod = 10                                                                   # AC Gain: 0dB
+        self.gain_mod = 10                                                                  # AC Gain: 0dB
         self.TC_mod = 5E-3                                                                  # Time Constant: [s]
         self.sens_mod = 200E-3                                                              # Sensitivity: [V]
         self.len_mod = 16384                                                                # Storage points
-        self.STR_mod = 50E-3                                                                # Curve buffer Storage Interval: [s/point]
+        self.STR_mod = 100E-3                                                               # Curve buffer Storage Interval: [s/point]
 
         """
         2f lock-in amplifier, model DSP7265
@@ -68,11 +68,11 @@ class Main:
         Harmonic = 2nd
         """
         self.l2f = L2f(8)                                                                   # GPIB address: 8
-        self.gain_2f = 50                                                                   # AC Gain: 10dB
+        self.gain_2f = 20                                                                   # AC Gain: 10dB
         self.TC_2f = 5E-3                                                                   # Time Constant: [s]
-        self.sens_2f = 100E-6                                                                # Sensitivity: [V]
+        self.sens_2f = 10E-3                                                                # Sensitivity: [V]
         self.len_2f = 16384                                                                 # Storage points
-        self.STR_2f = 50E-3                                                                 # Curve buffer Storage Interval: [s/point]
+        self.STR_2f = 100E-3                                                                # Curve buffer Storage Interval: [s/point]
 
         """
         DC lock-in amplifier, model DSP7265
@@ -80,11 +80,11 @@ class Main:
         Harmonic = 1st
         """
         self.dc = DC(9)                                                                     # GPIB address: 9
-        self.gain_dc = 50                                                                    # AC Gain: 0dB
+        self.gain_dc = 10                                                                   # AC Gain: 0dB
         self.TC_dc = 5E-3                                                                   # Time Constant: [s]
-        self.sens_dc = 50E-6                                                               # Sensitivity: [V]
+        self.sens_dc = 500E-3                                                               # Sensitivity: [V]
         self.len_dc = 16384                                                                 # Storage points
-        self.STR_dc = 50E-3                                                                 # Curve buffer Storage Interval: [s/point]
+        self.STR_dc = 100E-3                                                                # Curve buffer Storage Interval: [s/point]
 
         """
         Measurement settings
@@ -188,47 +188,37 @@ class Main:
             try:
                 with DLCpro(SerialConnection(self.dlc_port)) as dlc:
                     dlc.laser1.wide_scan.start()
-                    print('Scan duration =          ', int(self.WideScanDuration), 's')
+                    print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n========== Wide Scan Initiated ==========")
                     self.b.buffer('OPEN')
                     while i < self.EXT_NPeri:
                         if i == 0:
                             t0 = perf_counter()
-                        # wait until the start of the next period
                         while perf_counter() - t0 < self.EXT_times[i]:
                             pass
-                        
-                        # Record timestamp before writing the rise
-                        timestamp_before_rise = time()
-                        timestamps_before_rise.append(timestamp_before_rise)
-                        
+                        timestamps_before_rise.append(time())
                         task.write(self.EXT_rise)
-
-                        # Record timestamp after writing the rise
-                        timestamp_after_rise = time()
-                        timestamps_after_rise.append(timestamp_after_rise)
-
-                        # busy wait for 'TIME_HIGH' seconds. This should be more accurate than time.sleep(TIME_HIGH)
+                        timestamps_after_rise.append(time())
                         t1 = perf_counter()
                         while perf_counter() - t1 < (self.EXT_H):
                             pass
                         task.write(self.EXT_fall)
                         i = i + 1
-                        print(f"\rTime remaining:           {int(self.WideScanDuration-i*self.EXT_peri)}s", end='')
+                        print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.EXT_peri):4d}", 's', end='')
                     sleep(self.EXT_L)
                     print()
                     self.mod.halt_buffer()
                     self.l2f.halt_buffer()
                     self.dc.halt_buffer()
                     self.b.buffer('CLOS')
+                    elap_time = perf_counter() - t0
                     task.write(self.All_fall)
                     print("========== Wide Scan Completed ==========")
                     dlc.laser1.wide_scan.stop()
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
             print(f'{self.EXT_NPeri} periods of {self.EXT_peri} seconds')
-            elap_time = perf_counter() - t0
             task.stop()
             start_time = (timestamps_before_rise[0]+timestamps_after_rise[0]) / 2
             for j in range(len(timestamps_before_rise)):
@@ -253,22 +243,22 @@ class Main:
             try:
                 with DLCpro(SerialConnection(self.dlc_port)) as dlc:
                     dlc.laser1.wide_scan.start()
-                    print('Scan duration =          ', int(self.WideScanDuration), 's')
+                    print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n========== Wide Scan Initiated ==========")
+                    self.b.buffer('OPEN')
+                    start_time = time()
+                    task.write(self.INT_rise)
                     while i < self.INT_NPeri:
                         if i == 0:
-                            self.b.buffer('OPEN')
-                            start_time = time()
                             t0 = perf_counter()
                         while perf_counter() - t0 < self.INT_times[i]:
                             pass
-                        task.write(self.INT_rise)
                         t1 = perf_counter()
                         while perf_counter() - t1 < (self.INT_peri/2):
                             pass
                         i = i + 1
-                        print(f"\rTime remaining:           {int(self.WideScanDuration-i*self.INT_peri)}s", end='')
+                        print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.INT_peri):4d}", 's', end='')
                     self.mod.halt_buffer()
                     self.l2f.halt_buffer()
                     self.dc.halt_buffer()
@@ -305,7 +295,7 @@ class Main:
         L_times = [n * self.STR_mod for n in range(len(data[3]))]
         timestamp = [t0 + t for t in L_times]
 
-        formatted_timestamps = [strftime("%Y-%m-%dT%H:%M:%S.") + f"{t % 1:.3f}".split(".")[1] for t in timestamp]
+        formatted_timestamps = [strftime("%Y-%m-%dT%H:%M:%S.", localtime(t)) + f"{t % 1:.3f}".split(".")[1] for t in timestamp]
         timestamps.extend(formatted_timestamps)
 
         data.insert(0, timestamps)
@@ -337,8 +327,8 @@ class Main:
             print(f"An error occurred while saving data to the file: {e}")
 
     def countdown(self, seconds):
-        for i in range(seconds, 0, -1):
-            print(f"\rWide Scan starts in:      {i} s", end="")
+        for i in range(seconds, -1, -1):
+            print(f"\rWide Scan starts in:        {i}", end="")
             sleep(1)
 
 if __name__ == "__main__":
