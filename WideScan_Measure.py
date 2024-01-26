@@ -14,9 +14,9 @@ dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
 K_vapor = os.path.join(dir_path, 'K vapor cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
 lockin_path = os.path.join(K_vapor, 'Lock-ins data', f'{dt.now().strftime("%m-%d-%Y")}')
-lockin_file = f'Faraday_lockins_{dt.now().strftime("%Y-%m-%d")}_0.lvm'
+lockin_file = f'Faraday_lockins_{dt.now().strftime("%Y-%m-%d")}_1.lvm'
 bristol_path = os.path.join(K_vapor, 'Bristol data', f'{dt.now().strftime("%m-%d-%Y")}')
-bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}_0.csv'
+bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}_1.csv'
 
 class Main:
     def __init__(self):
