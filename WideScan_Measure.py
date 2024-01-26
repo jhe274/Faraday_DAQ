@@ -14,9 +14,9 @@ dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
 K_vapor = os.path.join(dir_path, 'K vapor cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
 lockin_path = os.path.join(K_vapor, 'Lock-ins data', f'{dt.now().strftime("%m-%d-%Y")}')
-lockin_file = f'Faraday_lockins_{dt.now().strftime("%Y-%m-%d")}.lvm'
+lockin_file = f'Faraday_lockins_{dt.now().strftime("%Y-%m-%d")}_0.lvm'
 bristol_path = os.path.join(K_vapor, 'Bristol data', f'{dt.now().strftime("%m-%d-%Y")}')
-bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}.csv'
+bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}_0.csv'
 
 class Main:
     def __init__(self):
@@ -29,23 +29,23 @@ class Main:
         self.dlc_port = 'COM5'                                                              # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                             # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 69                                                                # [V]
+        self.ScanOffset = 65                                                                # [V]
         self.ScanAmplitude = 0                                                              # [V]
-        self.StartVoltage = 74                                                              # [V]
-        self.EndVoltage = 76                                                                # [V]
-        self.ScanSpeed = 1                                                                # [V/s]
+        self.StartVoltage = 70                                                              # [V]
+        self.EndVoltage = 60                                                                # [V]
+        self.ScanSpeed = 0.05                                                               # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed    # [s], (integer)
         self.ScanShape = 0                                                                  # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                            # True -> Enable, False -> Disable
         
         """
-        Bristol 871A
+        Bristol 871A-VIS
         """
         self.port_Bristol = 'COM6'                                                          # Serial port number
-        self.auto_expo = 'OFF'                                                              # 'ON' or 'OFF'
+        self.auto_expo = 'ON'                                                              # 'ON' or 'OFF'
         self.cali_meth = 'TEMP'                                                             # 'TIME' or 'TEMP'
         self.trig_meth = 'INT'                                                              # 'INT' or 'RISE' or 'FALL'
-        self.fram_rate = 250                                                                # [Hz]
+        self.fram_rate = 100                                                                # [Hz]
         self.aver_stat = 'OFF'                                                              # 'ON' or 'OFF'
         self.aver_type = 'WAV'
         self.aver_coun = 20
@@ -68,9 +68,9 @@ class Main:
         Harmonic = 2nd
         """
         self.l2f = L2f(8)                                                                   # GPIB address: 8
-        self.gain_2f = 20                                                                   # AC Gain: 10dB
+        self.gain_2f = 40                                                                   # AC Gain: 10dB
         self.TC_2f = 5E-3                                                                   # Time Constant: [s]
-        self.sens_2f = 10E-3                                                                # Sensitivity: [V]
+        self.sens_2f = 1E-3                                                                # Sensitivity: [V]
         self.len_2f = 16384                                                                 # Storage points
         self.STR_2f = 100E-3                                                                # Curve buffer Storage Interval: [s/point]
 
@@ -80,9 +80,9 @@ class Main:
         Harmonic = 1st
         """
         self.dc = DC(9)                                                                     # GPIB address: 9
-        self.gain_dc = 10                                                                   # AC Gain: 0dB
+        self.gain_dc = 30                                                                    # AC Gain: 0dB
         self.TC_dc = 5E-3                                                                   # Time Constant: [s]
-        self.sens_dc = 500E-3                                                               # Sensitivity: [V]
+        self.sens_dc = 20E-3                                                               # Sensitivity: [V]
         self.len_dc = 16384                                                                 # Storage points
         self.STR_dc = 100E-3                                                                # Curve buffer Storage Interval: [s/point]
 
