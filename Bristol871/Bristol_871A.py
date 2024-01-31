@@ -170,7 +170,7 @@ class Bristol871(object):
         """
         self.buffer('CLOS')
         self.buffer('DATA?')
-        print('Getting first character:', self.tn.rawq_getchar())
+        print('\nGetting first character:', self.tn.rawq_getchar())
 
         #Number of characters in the byte string
         num_bytes_char = int(self.tn.rawq_getchar())

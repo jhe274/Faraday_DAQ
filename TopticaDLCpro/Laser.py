@@ -1,6 +1,6 @@
-import sys
+import sys, os
 from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection, DeviceNotFoundError
-import numpy as np
+from toptica.lasersdk.utils.dlcpro import * # for extract_float_arrays(...)
 
 class Laser(object):
     def __init__(self, port_number):
@@ -20,7 +20,7 @@ class Laser(object):
         # self.ScanSpeed = 0.05                                                           # [V/s]
         # self.ScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed    # [s], (integer)
 
-    def WideScan(self, OutputChannel, ScanOffset, StartVoltage, EndVoltage, ScanSpeed, ScanShape, ScanDuration, InputTrigger):
+    def WideScan(self, OutputChannel, ScanOffset, StartVoltage, EndVoltage, ScanSpeed, ScanShape, ScanDuration, InputTrigger, RecorderStepsize):
             """
             TOPTICA DLC pro
             """
@@ -35,5 +35,100 @@ class Laser(object):
                     dlc.laser1.wide_scan.scan_end.set(EndVoltage)
                     dlc.laser1.wide_scan.trigger.input_enabled.set(InputTrigger)      # True -> Enable, False -> Disable
                     dlc.laser1.wide_scan.trigger.input_channel.set(2)                 # 2 -> Digital Input 2
+                    dlc.laser1.wide_scan.recorder_stepsize_set.set(RecorderStepsize)
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
+
+    def get_recorder_data(self, laser):
+        """Read the data, recorded by the laser's recorder unit, into a dictionary
+        with the following content:
+        x-axis data:       'x' : {'title': _label_and_physical_unit_, 
+                                'data': _array_with_x_values_}
+        channel1 data:     'y' : {'title': _label_and_physical_unit_, 
+                                'data': _array_with_y_values_}
+        channel2 data:     'Y' : {'title': _label_and_physical_unit_, 
+                                'data': _array_with_y_values_}
+        sampling interval: 'dt': _sampling_interval_in_milliseconds_
+        
+        channel1 and channel2 data will only be available if they have been recorded,
+        i.e. the respective selection was not None.
+        """
+        x = []
+        y = []
+        Y = []
+        
+        # read info about recorded signals and sample count
+        x_title           = laser.recorder.data.channelx.name.get() \
+                        + " (" + laser.recorder.data.channelx.unit.get() + ")"
+        y_title           = laser.recorder.data.channel1.name.get() \
+                        + " (" + laser.recorder.data.channel1.unit.get() + ")"
+        Y_title           = laser.recorder.data.channel2.name.get() \
+                        + " (" + laser.recorder.data.channel2.unit.get() + ")"
+        sampling_interval = laser.recorder.data.recorded_sampling_interval.get()
+
+        # read recorded data in chunks of up to 1024 samples per channel
+        sample_count = laser.recorder.data.recorded_sample_count.get()
+        index        = 0
+        while index < sample_count:
+            # read a chunk of binary data and convert it into xy arrays
+            new_data = extract_float_arrays('xyY', laser.recorder.data.get_data(index, 1024))
+            x       += new_data['x']
+            if 'y' in new_data.keys():
+                y += new_data['y']
+            if 'Y' in new_data.keys():
+                Y += new_data['Y']
+            index += len(new_data['x'])
+            print(f"\rRead {index}/{sample_count} Wide Scan data.", end="")
+        # assemble result dictionary
+        result       = {'x': {'title': x_title, 'data' : x}}
+        result['dt'] = sampling_interval
+        if len(y) > 0:
+            result['y'] = {'title': y_title, 'data': y}
+        if len(Y) > 0:
+            result['Y'] = {'title': Y_title, 'data': Y}
+            
+        return result
+    
+    def save_recorder_data(self, path, filename, data):
+        """Write a dictionary, returned by the get_recorder_data(..) function into
+        a comma separated file.
+        First row will contain headers.
+        First column will contain x-axis values.
+        Second column will contain y-values of channel1, if available.
+        Next column will contain y-values of channel2, if available.
+        Last column will contain sampling time in milliseconds.
+        """
+        try:
+            counter = 1
+            original_filename = filename
+
+            while os.path.isfile(os.path.join(path, filename)):
+                filename = f"{original_filename.split('.')[0]}_{counter}.csv"
+                counter += 1
+
+            file_path = os.path.join(path, filename)
+
+            with open(file_path, "w") as f:
+                headers = []
+                headers.append(data['x']['title'])
+                if 'y' in data.keys():
+                    headers.append(data['y']['title'])
+                if 'Y' in data.keys():
+                    headers.append(data['Y']['title'])
+                headers.append('time (ms)')
+                f.write(",".join(headers) + "\n")
+
+                size = len(data['x']['data'])
+                dt   = data['dt']
+                for i in range(size):
+                    values = []
+                    values.append(str(data['x']['data'][i]))
+                    if 'y' in data.keys():
+                        values.append(str(data['y']['data'][i]))
+                    if 'Y' in data.keys():
+                        values.append(str(data['Y']['data'][i]))
+                    values.append(str(dt * i))
+                    f.write(",".join(values) + "\n")
+
+        except Exception as e:
+            print(f"An error occurred while saving data to the file: {e}")

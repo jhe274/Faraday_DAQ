@@ -13,10 +13,12 @@ import numpy as np
 dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
 K_vapor = os.path.join(dir_path, 'K vapor cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
-lockin_path = os.path.join(K_vapor, 'Lock-ins data', f'{dt.now().strftime("%m-%d-%Y")}')
-lockin_file = f'Faraday_lockins_{dt.now().strftime("%Y-%m-%d")}_1.lvm'
+DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro data', f'{dt.now().strftime("%m-%d-%Y")}')
+DLCpro_file = f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv'
+lockin_path = os.path.join(K_vapor, 'Lockins data', f'{dt.now().strftime("%m-%d-%Y")}')
+lockin_file = f'Faraday_lockins_{dt.now().strftime("%Y-%m-%d")}.lvm'
 bristol_path = os.path.join(K_vapor, 'Bristol data', f'{dt.now().strftime("%m-%d-%Y")}')
-bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}_1.csv'
+bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}.csv'
 
 class Main:
     def __init__(self):
@@ -26,27 +28,28 @@ class Main:
         """
         TOPTICA DLC pro
         """
-        self.dlc_port = 'COM5'                                                              # Serial port number
+        self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
-        self.OutputChannel = 50                                                             # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 65                                                                # [V]
-        self.ScanAmplitude = 0                                                              # [V]
-        self.StartVoltage = 70                                                              # [V]
-        self.EndVoltage = 60                                                                # [V]
-        self.ScanSpeed = 0.05                                                               # [V/s]
-        self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed    # [s], (integer)
-        self.ScanShape = 0                                                                  # 0 -> Sawtooth, 1 -> Traingle
-        self.InputTrigger = True                                                            # True -> Enable, False -> Disable
+        self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
+        self.ScanOffset = 69                                                                    # [V]
+        self.ScanAmplitude = 0                                                                  # [V]
+        self.StartVoltage = 74                                                                  # [V]
+        self.EndVoltage = 64                                                                    # [V]
+        self.ScanSpeed = 0.05                                                                   # [V/s]
+        self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
+        self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
+        self.InputTrigger = True                                                                # True -> Enable, False -> Disable
+        self.RecorderStepsize = 0.00005                                                          # [V]
         
         """
         Bristol 871A-VIS
         """
-        self.port_Bristol = 'COM6'                                                          # Serial port number
-        self.auto_expo = 'ON'                                                              # 'ON' or 'OFF'
-        self.cali_meth = 'TEMP'                                                             # 'TIME' or 'TEMP'
-        self.trig_meth = 'INT'                                                              # 'INT' or 'RISE' or 'FALL'
-        self.fram_rate = 100                                                                # [Hz]
-        self.aver_stat = 'OFF'                                                              # 'ON' or 'OFF'
+        self.port_Bristol = 'COM6'                                                              # Serial port number
+        self.auto_expo = 'ON'                                                                   # 'ON' or 'OFF'
+        self.cali_meth = 'TEMP'                                                                 # 'TIME' or 'TEMP'
+        self.trig_meth = 'INT'                                                                  # 'INT' or 'RISE' or 'FALL'
+        self.fram_rate = 100                                                                    # [Hz]
+        self.aver_stat = 'OFF'                                                                  # 'ON' or 'OFF'
         self.aver_type = 'WAV'
         self.aver_coun = 20
         
@@ -55,36 +58,36 @@ class Main:
         Reference frequency = 10 Hz
         Harmonic = 1st
         """
-        self.mod = Mod(7)                                                                   # GPIB address: 7
-        self.gain_mod = 10                                                                  # AC Gain: 0dB
-        self.TC_mod = 5E-3                                                                  # Time Constant: [s]
-        self.sens_mod = 200E-3                                                              # Sensitivity: [V]
-        self.len_mod = 16384                                                                # Storage points
-        self.STR_mod = 100E-3                                                               # Curve buffer Storage Interval: [s/point]
+        self.mod = Mod(7)                                                                       # GPIB address: 7
+        self.gain_mod = 10                                                                      # AC Gain: 0dB
+        self.TC_mod = 5E-3                                                                      # Time Constant: [s]
+        self.sens_mod = 200E-3                                                                  # Sensitivity: [V]
+        self.len_mod = 16384                                                                    # Storage points
+        self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
 
         """
         2f lock-in amplifier, model DSP7265
         Reference frequency = 50,000 Hz
         Harmonic = 2nd
         """
-        self.l2f = L2f(8)                                                                   # GPIB address: 8
-        self.gain_2f = 40                                                                   # AC Gain: 10dB
-        self.TC_2f = 5E-3                                                                   # Time Constant: [s]
-        self.sens_2f = 1E-3                                                                # Sensitivity: [V]
-        self.len_2f = 16384                                                                 # Storage points
-        self.STR_2f = 100E-3                                                                # Curve buffer Storage Interval: [s/point]
+        self.l2f = L2f(8)                                                                       # GPIB address: 8
+        self.gain_2f = 30                                                                       # AC Gain: 10dB
+        self.TC_2f = 5E-3                                                                       # Time Constant: [s]
+        self.sens_2f = 1E-3                                                                     # Sensitivity: [V]
+        self.len_2f = 16384                                                                     # Storage points
+        self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
         """
         DC lock-in amplifier, model DSP7265
         Reference frequency = 977 Hz
         Harmonic = 1st
         """
-        self.dc = DC(9)                                                                     # GPIB address: 9
-        self.gain_dc = 30                                                                    # AC Gain: 0dB
-        self.TC_dc = 5E-3                                                                   # Time Constant: [s]
-        self.sens_dc = 20E-3                                                               # Sensitivity: [V]
-        self.len_dc = 16384                                                                 # Storage points
-        self.STR_dc = 100E-3                                                                # Curve buffer Storage Interval: [s/point]
+        self.dc = DC(9)                                                                         # GPIB address: 9
+        self.gain_dc = 30                                                                       # AC Gain: 0dB
+        self.TC_dc = 5E-3                                                                       # Time Constant: [s]
+        self.sens_dc = 20E-3                                                                    # Sensitivity: [V]
+        self.len_dc = 16384                                                                     # Storage points
+        self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
         """
         Measurement settings
@@ -92,14 +95,14 @@ class Main:
         the pulse should not be shorter than 5ms
         since it reduces 
         """
-        self.EXT_H = 0.005                                                                  # 5ms pulse
-        self.EXT_L = 0.005                                                                  # send every 5ms
-        self.INT_peri = 1 / self.fram_rate                                                  # Bristol measurement period while using EXTERNAL trigger
-        self.EXT_peri = self.EXT_H + self.EXT_L                                             # Bristol measurement period while using EXTERNAL trigger
-        self.INT_NPeri = int(self.WideScanDuration / self.INT_peri)                         # Number of periods while using INTERNAL trigger
-        self.EXT_NPeri = int(self.WideScanDuration / self.EXT_peri)                         # Number of periods while using EXTERNAL trigger
-        self.INT_times = [ (i*self.INT_peri) for i in range(self.INT_NPeri) ]               # Measurement time array while using INTERNAL trigger
-        self.EXT_times = [ (i*self.EXT_peri) for i in range(self.EXT_NPeri) ]               # Measurement time array while using EXTERNAL trigger
+        self.EXT_H = 0.005                                                                      # 5ms pulse
+        self.EXT_L = 0.005                                                                      # send every 5ms
+        self.INT_peri = 1 / self.fram_rate                                                      # Bristol measurement period while using EXTERNAL trigger
+        self.EXT_peri = self.EXT_H + self.EXT_L                                                 # Bristol measurement period while using EXTERNAL trigger
+        self.INT_NPeri = int(self.WideScanDuration / self.INT_peri)                             # Number of periods while using INTERNAL trigger
+        self.EXT_NPeri = int(self.WideScanDuration / self.EXT_peri)                             # Number of periods while using EXTERNAL trigger
+        self.INT_times = [ (i*self.INT_peri) for i in range(self.INT_NPeri) ]                   # Measurement time array while using INTERNAL trigger
+        self.EXT_times = [ (i*self.EXT_peri) for i in range(self.EXT_NPeri) ]                   # Measurement time array while using EXTERNAL trigger
         self.INT_rise = [True, True]
         self.INT_fall = [False, False]
         self.EXT_rise = [True, True, True]
@@ -120,7 +123,7 @@ class Main:
         """
         self.laser.WideScan(self.OutputChannel, self.ScanOffset, self.StartVoltage,
                             self.EndVoltage, self.ScanSpeed, self.ScanShape,
-                            self.WideScanDuration, self.InputTrigger)
+                            self.WideScanDuration, self.InputTrigger, self.RecorderStepsize)
 
     def config_Bristol(self):
         """
@@ -133,10 +136,10 @@ class Main:
             print('Could not connect to Bristol871 wavelength meter: {}'.format(e))
             exit(1)
             
-        print('Detector type =          ', self.b.detector('CW'))                           # Detector type = CW
+        print('Detector type =          ', self.b.detector('CW'))                               # Detector type = CW
         print('Auto exposure =          ', self.b.auto_expo(self.auto_expo))
         print('Calibration method =     ', self.b.calib_method(self.cali_meth))
-        self.b.calib_temp(5)                                                                # Temperature delta = 0.5°C
+        self.b.calib_temp(5)                                                                    # Temperature delta = 0.5°C
         print('Trigger method =         ', self.b.trigger_method(self.trig_meth))
         if self.trig_meth == 'INT':
             print('Frame rate =             ', self.b.frame_rate(self.fram_rate), 'Hz')
@@ -168,7 +171,7 @@ class Main:
         """
         Initialize Bristol wavelength meter buffer
         """
-        self.b.buffer('INIT')                                                               # Initilize buffer
+        self.b.buffer('INIT')                                                                   # Initilize buffer
         print('Bristol buffer initialized.\n')
 
     def EXT_trig_mea(self):
@@ -177,17 +180,17 @@ class Main:
         """
         print('Bristol wavelength meter is operating at EXTERNAL trigger mode...')
         with nidaqmx.Task() as task:
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line0")                           # DIO0: Gate12, Bristol
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")                           # DIO1: Gate16, lock-ins
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")                           # DIO2: Gate17, Toptica DLC pro
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line0")                               # DIO0: Gate12, Bristol
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")                               # DIO1: Gate16, lock-ins
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")                               # DIO2: Gate17, Toptica DLC pro
             task.start()
             i = 0
             timestamps = []
             timestamps_before_rise = []
             timestamps_after_rise = []
             try:
-                with DLCpro(SerialConnection(self.dlc_port)) as dlc:
-                    dlc.laser1.wide_scan.start()
+                with DLCpro(SerialConnection(self.dlc_port)) as dlcpro:
+                    dlcpro.laser1.wide_scan.start()
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n========== Wide Scan Initiated ==========")
@@ -215,14 +218,16 @@ class Main:
                     elap_time = perf_counter() - t0
                     task.write(self.All_fall)
                     print("========== Wide Scan Completed ==========")
-                    dlc.laser1.wide_scan.stop()
+                    dlcpro.laser1.wide_scan.stop()
+                    result = self.laser.get_recorder_data(dlcpro.laser1)
+                    self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
             print(f'{self.EXT_NPeri} periods of {self.EXT_peri} seconds')
             task.stop()
             start_time = (timestamps_before_rise[0]+timestamps_after_rise[0]) / 2
             for j in range(len(timestamps_before_rise)):
-                timestamp = (timestamps_before_rise[j] + timestamps_after_rise[j]) / 2      # Average of before and after write
+                timestamp = (timestamps_before_rise[j] + timestamps_after_rise[j]) / 2          # Average of before and after write
                 formatted_timestamp = strftime("%Y-%m-%dT%H:%M:%S.", localtime(timestamp)) + f"{timestamp % 1:.3f}".split(".")[1]
                 timestamps.append(formatted_timestamp)
 
@@ -235,14 +240,14 @@ class Main:
         print('Bristol wavelength meter is operating at INTERNAL trigger mode...')
         with nidaqmx.Task() as task:
             # Logic TTL at the selected DIO channel gates
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")                           # DIO1: Gate16, lock-ins
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")                           # DIO2: Gate17, Toptica DLC pro
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")                               # DIO1: Gate16, lock-ins
+            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")                               # DIO2: Gate17, Toptica DLC pro
             task.start()
             i = 0
             timestamps = []
             try:
-                with DLCpro(SerialConnection(self.dlc_port)) as dlc:
-                    dlc.laser1.wide_scan.start()
+                with DLCpro(SerialConnection(self.dlc_port)) as dlcpro:
+                    dlcpro.laser1.wide_scan.start()
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n========== Wide Scan Initiated ==========")
@@ -266,7 +271,9 @@ class Main:
                     elap_time = perf_counter() - t0
                     task.write(self.INT_fall)
                     print("\n========== Wide Scan Completed ==========")
-                    dlc.laser1.wide_scan.stop()
+                    dlcpro.laser1.wide_scan.stop()
+                    result = self.laser.get_recorder_data(dlcpro.laser1)
+                    self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
             task.stop()
