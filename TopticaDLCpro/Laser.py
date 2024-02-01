@@ -1,4 +1,5 @@
-import sys, os
+import sys, os, datetime
+from time import strftime, localtime
 from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection, DeviceNotFoundError
 from toptica.lasersdk.utils.dlcpro import * # for extract_float_arrays(...)
 
@@ -101,12 +102,14 @@ class Laser(object):
         try:
             counter = 1
             original_filename = filename
+            folder_name = datetime.datetime.now().strftime("%m-%d-%Y")
+            folder_path = os.path.join(path, folder_name)
+            os.makedirs(folder_path, exist_ok=True)
 
-            while os.path.isfile(os.path.join(path, filename)):
+            while os.path.isfile(os.path.join(folder_path, filename)):
                 filename = f"{original_filename.split('.')[0]}_{counter}.csv"
                 counter += 1
-
-            file_path = os.path.join(path, filename)
+            file_path = os.path.join(folder_path, filename)
 
             with open(file_path, "w") as f:
                 headers = []

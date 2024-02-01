@@ -2,7 +2,8 @@ from telnetlib import Telnet
 from serial import Serial
 import struct
 import numpy as np
-import os
+import os, datetime
+from time import strftime, localtime
 
 class Bristol871(object):
     """Class representing a Bristol 871 device.
@@ -170,7 +171,8 @@ class Bristol871(object):
         """
         self.buffer('CLOS')
         self.buffer('DATA?')
-        print('\nGetting first character:', self.tn.rawq_getchar())
+        print('\nRetrieving data from Bristol buffer...')
+        print('Getting first character:', self.tn.rawq_getchar())
 
         #Number of characters in the byte string
         num_bytes_char = int(self.tn.rawq_getchar())
@@ -193,10 +195,14 @@ class Bristol871(object):
         try:
             counter = 1
             original_filename = filename
-            while os.path.isfile(os.path.join(path, filename)):
+            folder_name = datetime.datetime.now().strftime("%m-%d-%Y")
+            folder_path = os.path.join(path, folder_name)
+            os.makedirs(folder_path, exist_ok=True)
+            
+            while os.path.isfile(os.path.join(folder_path, filename)):
                 filename = f"{original_filename.split('.')[0]}_{counter}.csv"
                 counter += 1
-            file_path = os.path.join(path, filename)
+            file_path = os.path.join(folder_path, filename)
                 
             with open(file_path, 'w') as log:
                 header = 'Timestamp,Status,Wavelength,Intensity\n'

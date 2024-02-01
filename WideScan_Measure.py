@@ -13,33 +13,17 @@ import numpy as np
 dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
 K_vapor = os.path.join(dir_path, 'K vapor cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
-DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro data', f'{dt.now().strftime("%m-%d-%Y")}')
+DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro data')
 DLCpro_file = f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv'
-lockin_path = os.path.join(K_vapor, 'Lockins data', f'{dt.now().strftime("%m-%d-%Y")}')
+lockin_path = os.path.join(K_vapor, 'Lockins data')
 lockin_file = f'Faraday_lockins_{dt.now().strftime("%Y-%m-%d")}.lvm'
-bristol_path = os.path.join(K_vapor, 'Bristol data', f'{dt.now().strftime("%m-%d-%Y")}')
+bristol_path = os.path.join(K_vapor, 'Bristol data')
 bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}.csv'
 
 class Main:
     def __init__(self):
         self.system = nidaqmx.system.System.local()
         self.system.driver_version
-        
-        """
-        TOPTICA DLC pro
-        """
-        self.dlc_port = 'COM5'                                                                  # Serial port number
-        self.laser = Laser(self.dlc_port)
-        self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 69                                                                    # [V]
-        self.ScanAmplitude = 0                                                                  # [V]
-        self.StartVoltage = 74                                                                  # [V]
-        self.EndVoltage = 64                                                                    # [V]
-        self.ScanSpeed = 0.05                                                                   # [V/s]
-        self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
-        self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
-        self.InputTrigger = True                                                                # True -> Enable, False -> Disable
-        self.RecorderStepsize = 0.00005                                                          # [V]
         
         """
         Bristol 871A-VIS
@@ -52,6 +36,22 @@ class Main:
         self.aver_stat = 'OFF'                                                                  # 'ON' or 'OFF'
         self.aver_type = 'WAV'
         self.aver_coun = 20
+
+        """
+        TOPTICA DLC pro
+        """
+        self.dlc_port = 'COM5'                                                                  # Serial port number
+        self.laser = Laser(self.dlc_port)
+        self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
+        self.ScanOffset = 69                                                                    # [V]
+        self.ScanAmplitude = 0                                                                  # [V]
+        self.StartVoltage = 75                                                                  # [V]
+        self.EndVoltage = 65                                                                    # [V]
+        self.ScanSpeed = 0.05                                                                   # [V/s]
+        self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
+        self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
+        self.InputTrigger = True                                                                # True -> Enable, False -> Disable
+        self.RecorderStepsize = self.ScanSpeed / self.fram_rate                                 # [V]
         
         """
         Mod lock-in amplifier, model DSP7265
@@ -73,7 +73,7 @@ class Main:
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.gain_2f = 30                                                                       # AC Gain: 10dB
         self.TC_2f = 5E-3                                                                       # Time Constant: [s]
-        self.sens_2f = 1E-3                                                                     # Sensitivity: [V]
+        self.sens_2f = 2E-3                                                                     # Sensitivity: [V]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -83,9 +83,9 @@ class Main:
         Harmonic = 1st
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
-        self.gain_dc = 30                                                                       # AC Gain: 0dB
+        self.gain_dc = 20                                                                       # AC Gain: 0dB
         self.TC_dc = 5E-3                                                                       # Time Constant: [s]
-        self.sens_dc = 20E-3                                                                    # Sensitivity: [V]
+        self.sens_dc = 50E-3                                                                    # Sensitivity: [V]
         self.len_dc = 16384                                                                     # Storage points
         self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -299,7 +299,7 @@ class Main:
             data.extend([X, Y])
 
         # Create a list of timestamps for lock-ins
-        L_times = [n * self.STR_mod for n in range(len(data[3]))]
+        L_times = [n * self.STR_2f for n in range(len(data[3]))]
         timestamp = [t0 + t for t in L_times]
 
         formatted_timestamps = [strftime("%Y-%m-%dT%H:%M:%S.", localtime(t)) + f"{t % 1:.3f}".split(".")[1] for t in timestamp]
@@ -310,12 +310,15 @@ class Main:
         try:
             counter = 1
             original_filename = filename
+            folder_name = strftime("%m-%d-%Y", localtime(t0))
+            folder_path = os.path.join(path, folder_name)
+            os.makedirs(folder_path, exist_ok=True)
 
-            while os.path.isfile(os.path.join(path, filename)):
+            while os.path.isfile(os.path.join(folder_path, filename)):
                 filename = f"{original_filename.split('.')[0]}_{counter}.lvm"
                 counter += 1
 
-            file_path = os.path.join(path, filename)
+            file_path = os.path.join(folder_path, filename)
 
             with open(file_path, "w") as log:
                 for attribute, value in zip(['TC_mod[s]', 'SENS_mod[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]'],
