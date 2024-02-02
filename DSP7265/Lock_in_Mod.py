@@ -49,9 +49,10 @@ class Mod:
         raw = self.mod.get_buffer(quantity=None, convert_to_float=False, wait_for_buffer=True)
         XY = self.mod.buffer_to_float(raw, sensitivity=sens, raise_error=True)
         X, Y = XY['x'], XY['y']
-        print(f'{self.name} buffer status is ' + str(self.mod.curve_buffer_status))
+        status = self.mod.curve_buffer_status
+        print(f'{self.name} buffer status is ' + str(status))
         
-        return X, Y
+        return X, Y, status
 
 # Modu = Mod()
 # # Modu.Signal_channel()

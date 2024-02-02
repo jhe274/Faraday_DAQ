@@ -211,10 +211,9 @@ class Bristol871(object):
                     raw_data = b''.join(self.tn.rawq_getchar() for _ in range(20))
                     wvl, pwr, status, _ = struct.unpack('<dfII', raw_data)
                     log.write('{},{},{:.7f},{:.3f}\n'.format(timestamp, str(status).zfill(5), wvl, pwr))
+            print('Succesfully saved {} measurements from Bristol buffer.'.format(len(timestamps)))
         except Exception as e:
             print(f"An error occurred while saving data to the file: {e}")
-
-        print('Read {} measurements.'.format(len(timestamps)))
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # SENSe Subsystem

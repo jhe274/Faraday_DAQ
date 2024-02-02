@@ -43,10 +43,10 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 69                                                                    # [V]
+        self.ScanOffset = 71                                                                    # [V]
         self.ScanAmplitude = 0                                                                  # [V]
-        self.StartVoltage = 75                                                                  # [V]
-        self.EndVoltage = 65                                                                    # [V]
+        self.StartVoltage = 66                                                                  # [V]
+        self.EndVoltage = 76                                                                    # [V]
         self.ScanSpeed = 0.05                                                                   # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
         self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
@@ -60,7 +60,7 @@ class Main:
         """
         self.mod = Mod(7)                                                                       # GPIB address: 7
         self.gain_mod = 10                                                                      # AC Gain: 0dB
-        self.TC_mod = 5E-3                                                                      # Time Constant: [s]
+        self.TC_mod = 100E-3                                                                      # Time Constant: [s]
         self.sens_mod = 200E-3                                                                  # Sensitivity: [V]
         self.len_mod = 16384                                                                    # Storage points
         self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
@@ -71,8 +71,8 @@ class Main:
         Harmonic = 2nd
         """
         self.l2f = L2f(8)                                                                       # GPIB address: 8
-        self.gain_2f = 30                                                                       # AC Gain: 10dB
-        self.TC_2f = 5E-3                                                                       # Time Constant: [s]
+        self.gain_2f = 30                                                                       # AC Gain: 30dB
+        self.TC_2f = 100E-3                                                                      # Time Constant: [s]
         self.sens_2f = 2E-3                                                                     # Sensitivity: [V]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -83,17 +83,16 @@ class Main:
         Harmonic = 1st
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
-        self.gain_dc = 20                                                                       # AC Gain: 0dB
-        self.TC_dc = 5E-3                                                                       # Time Constant: [s]
+        self.gain_dc = 20                                                                       # AC Gain: 20dB
+        self.TC_dc = 100E-3                                                                      # Time Constant: [s]
         self.sens_dc = 50E-3                                                                    # Sensitivity: [V]
         self.len_dc = 16384                                                                     # Storage points
         self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
         """
         Measurement settings
-        The computer clock determines the timestamps
-        the pulse should not be shorter than 5ms
-        since it reduces 
+        The computer clock determines the timestamps for EXT trigger method
+        the pulse period should not be shorter than 5ms
         """
         self.EXT_H = 0.005                                                                      # 5ms pulse
         self.EXT_L = 0.005                                                                      # send every 5ms
@@ -115,7 +114,8 @@ class Main:
         """
         for device in self.system.devices:
             print(device, '\r')
-        print('Connected to NI-cDAQ-9172...')
+            nidaqmx.Task().close()
+        print('NI-cDAQ-9172 Initialized.')
 
     def config_DLCpro(self):
         """
@@ -131,9 +131,8 @@ class Main:
         """
         try:
             self.b = Bristol871(self.port_Bristol)
-            print('Connected to Bristol871 wavelength meter...\n')
         except Exception as e:
-            print('Could not connect to Bristol871 wavelength meter: {}'.format(e))
+            print('Could not connect to Bristol871 wavelength meter: {}\n'.format(e))
             exit(1)
             
         print('Detector type =          ', self.b.detector('CW'))                               # Detector type = CW
@@ -142,12 +141,12 @@ class Main:
         self.b.calib_temp(5)                                                                    # Temperature delta = 0.5°C
         print('Trigger method =         ', self.b.trigger_method(self.trig_meth))
         if self.trig_meth == 'INT':
-            print('Frame rate =             ', self.b.frame_rate(self.fram_rate), 'Hz')
+            print('Frame rate =             ', self.b.frame_rate(self.fram_rate), 'Hz\n')
             # print('Average method =         ', self.b.average_state(self.aver_stat))
             # print('Average data type =      ', self.b.average_data(self.aver_type))
             # print('Average count =          ', self.b.average_count(self.aver_coun))
         else:
-            print('Frame rate =             ', round(1/self.EXT_peri), 'Hz')
+            print('Frame rate =             ', round(1/self.EXT_peri), 'Hz\n')
         
     def config_lock_ins(self):
         """
@@ -193,7 +192,7 @@ class Main:
                     dlcpro.laser1.wide_scan.start()
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
-                    print("\n========== Wide Scan Initiated ==========")
+                    print("\n=============== Wide Scan Initiated ===============")
                     self.b.buffer('OPEN')
                     while i < self.EXT_NPeri:
                         if i == 0:
@@ -217,7 +216,7 @@ class Main:
                     self.b.buffer('CLOS')
                     elap_time = perf_counter() - t0
                     task.write(self.All_fall)
-                    print("========== Wide Scan Completed ==========")
+                    print("=============== Wide Scan Completed ===============")
                     dlcpro.laser1.wide_scan.stop()
                     result = self.laser.get_recorder_data(dlcpro.laser1)
                     self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
@@ -250,7 +249,7 @@ class Main:
                     dlcpro.laser1.wide_scan.start()
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
-                    print("\n========== Wide Scan Initiated ==========")
+                    print("\n=============== Wide Scan Initiated ===============")
                     self.b.buffer('OPEN')
                     start_time = time()
                     task.write(self.INT_rise)
@@ -270,7 +269,7 @@ class Main:
                     self.b.buffer('CLOS')
                     elap_time = perf_counter() - t0
                     task.write(self.INT_fall)
-                    print("\n========== Wide Scan Completed ==========")
+                    print("\n=============== Wide Scan Completed ===============")
                     dlcpro.laser1.wide_scan.stop()
                     result = self.laser.get_recorder_data(dlcpro.laser1)
                     self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
@@ -288,15 +287,18 @@ class Main:
         """
         Retrieve data from lock-in buffers
         """
+        print('\nRetrieving data from Lock-ins buffer...')
         buffers = [self.mod, self.l2f, self.dc]
         sensors = [self.sens_mod, self.sens_2f, self.sens_dc]
         
         data = []
+        buffer_status = []
         timestamps = []
 
         for buffer, sensor in zip(buffers, sensors):
-            X, Y = buffer.get_curve_buffer(sensor)
+            X, Y, status = buffer.get_curve_buffer(sensor)
             data.extend([X, Y])
+            buffer_status.append(status)
 
         # Create a list of timestamps for lock-ins
         L_times = [n * self.STR_2f for n in range(len(data[3]))]
@@ -332,7 +334,6 @@ class Main:
 
                 for row in zip(*data):
                     log.write(','.join(map(str, row)) + '\n')
-
         except Exception as e:
             print(f"An error occurred while saving data to the file: {e}")
 

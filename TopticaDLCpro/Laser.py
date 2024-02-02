@@ -79,7 +79,7 @@ class Laser(object):
             if 'Y' in new_data.keys():
                 Y += new_data['Y']
             index += len(new_data['x'])
-            print(f"\rRead {index}/{sample_count} Wide Scan data.", end="")
+            print(f"\rRead {index}/{sample_count} Wide Scan data from TOPTICA DLC pro.", end="")
         # assemble result dictionary
         result       = {'x': {'title': x_title, 'data' : x}}
         result['dt'] = sampling_interval

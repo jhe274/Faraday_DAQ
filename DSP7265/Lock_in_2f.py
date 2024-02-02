@@ -39,7 +39,7 @@ class L2f():
             points corresponds to the Length option in Curve Buffer Menu, max at 32768
             quantities corresponds to the Curve Selection in Curve Buffer Menu, default is 'X' & 'Y'
             interval corresponds to the Time/Point option in Curve Buffer Menu
-            min = 1.25 ms/point, and if TC >= 5 ms, then interval = 640 micros
+            min = 1.25 ms/point, and if TC >= 5 ms, then interval = 640 microseconds
         """
         print(f'{self.name} buffer initialized.')
         self.l2f.set_buffer(points=LEN, quantities=None, interval=STR)
@@ -49,9 +49,10 @@ class L2f():
         raw = self.l2f.get_buffer(quantity=None, convert_to_float=False, wait_for_buffer=True)
         XY = self.l2f.buffer_to_float(raw, sensitivity=sens, raise_error=True)
         X, Y = XY['x'], XY['y']
-        print(f'{self.name} buffer status is ' + str(self.l2f.curve_buffer_status))
+        status = self.l2f.curve_buffer_status
+        print(f'{self.name} buffer status is ' + str(status))
 
-        return X, Y
+        return X, Y, status
     
 
 

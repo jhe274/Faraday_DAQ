@@ -49,9 +49,10 @@ class DC:
         raw = self.dc.get_buffer(quantity=None, convert_to_float=False, wait_for_buffer=True)
         XY = self.dc.buffer_to_float(raw, sensitivity=sens, raise_error=True)
         X, Y = XY['x'], XY['y']
-        print(f'{self.name} buffer status is ' + str(self.dc.curve_buffer_status))
+        status = self.dc.curve_buffer_status
+        print(f'{self.name} buffer status is ' + str(status))
 
-        return X, Y
+        return X, Y, status
 
 # DC = DC()
 # # Modu.Signal_channel()
