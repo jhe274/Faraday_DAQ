@@ -5,38 +5,48 @@ from toptica.lasersdk.utils.dlcpro import * # for extract_float_arrays(...)
 
 class Laser(object):
     def __init__(self, port_number):
-        self.serial_port = SerialConnection(port_number)                              # Serial port number
+        self.serial_port = SerialConnection(port_number)                                    # Serial port number
 
         """
         SC - Scan Control
         """
-        # self.ScanOffset = 70                                                            # [V]
-        # self.ScanAmplitude = 0                                                          # [V]
+        # self.ScanOffset = 70                                                                # [V]
+        # self.ScanAmplitude = 0                                                              # [V]
     
-        # """
-        # Wide Scan
-        # """
-        # self.StartVoltage = 69                                                          # [V]
-        # self.EndVoltage = 71                                                            # [V]
-        # self.ScanSpeed = 0.05                                                           # [V/s]
-        # self.ScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed    # [s], (integer)
+        """
+        Wide Scan
+        """
+        # self.StartVoltage = 69                                                              # [V]
+        # self.EndVoltage = 71                                                                # [V]
+        # self.ScanSpeed = 0.05                                                               # [V/s]
+        # self.ScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
 
-    def WideScan(self, OutputChannel, ScanOffset, StartVoltage, EndVoltage, ScanSpeed, ScanShape, ScanDuration, InputTrigger, RecorderStepsize):
+    def WideScan(self, OutputChannel, ScanOffset, StartVoltage, 
+                 EndVoltage, ScanSpeed, ScanShape, ScanDuration,
+                 InputTrigger, RecorderStepsize, Ch1, Ch2,
+                 LPfilter, Ch1_CutOff, Ch2_CutOff):
             """
             TOPTICA DLC pro
             """
             try:
                 with DLCpro(self.serial_port) as dlc:
-                    dlc.laser1.wide_scan.output_channel.set(OutputChannel)            # PC Voltage
+                    dlc.laser1.wide_scan.stop()
+                    dlc.laser1.wide_scan.output_channel.set(OutputChannel)                  # PC Voltage
                     dlc.laser1.scan.offset.set(ScanOffset)
+                    dlc.laser1.scan.enabled.set(False)
                     dlc.laser1.wide_scan.shape.set(ScanShape)
                     dlc.laser1.wide_scan._speed.set(ScanSpeed)
                     dlc.laser1.wide_scan.duration.set(ScanDuration)
                     dlc.laser1.wide_scan.scan_begin.set(StartVoltage)
                     dlc.laser1.wide_scan.scan_end.set(EndVoltage)
-                    dlc.laser1.wide_scan.trigger.input_enabled.set(InputTrigger)      # True -> Enable, False -> Disable
-                    dlc.laser1.wide_scan.trigger.input_channel.set(2)                 # 2 -> Digital Input 2
+                    dlc.laser1.wide_scan.trigger.input_enabled.set(InputTrigger)            # True -> Enable, False -> Disable
+                    dlc.laser1.wide_scan.trigger.input_channel.set(2)                       # 2 -> Digital Input 2
                     dlc.laser1.wide_scan.recorder_stepsize_set.set(RecorderStepsize)
+                    dlc.laser1.recorder.inputs.channel1.signal.set(Ch1)
+                    dlc.laser1.recorder.inputs.channel2.signal.set(Ch2)
+                    dlc.laser1.recorder.inputs.channel1.low_pass_filter.enabled.set(LPfilter)
+                    dlc.laser1.recorder.inputs.channel1.low_pass_filter.cut_off_frequency.set(Ch1_CutOff)
+                    dlc.laser1.recorder.inputs.channel2.low_pass_filter.cut_off_frequency.set(Ch2_CutOff)
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
 

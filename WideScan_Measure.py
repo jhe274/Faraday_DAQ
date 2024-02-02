@@ -1,7 +1,7 @@
 import os, sys
 from time import time, sleep, perf_counter, strftime, localtime
 from datetime import datetime as dt
-import nidaqmx.system
+import nidaqmx.system, nidaqmx.system.storage
 from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection, DeviceNotFoundError
 from TopticaDLCpro.Laser import Laser
 from Bristol871.Bristol_871A import Bristol871
@@ -22,7 +22,9 @@ bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}.csv'
 
 class Main:
     def __init__(self):
+        self.NI_channel = 'cDAQ1Mod4'
         self.system = nidaqmx.system.System.local()
+        self.device = nidaqmx.system.Device(f'{self.NI_channel}')
         self.system.driver_version
         
         """
@@ -43,16 +45,21 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 71                                                                    # [V]
+        self.ScanOffset = 69                                                                    # [V]
         self.ScanAmplitude = 0                                                                  # [V]
-        self.StartVoltage = 66                                                                  # [V]
-        self.EndVoltage = 76                                                                    # [V]
+        self.StartVoltage = self.ScanOffset + 15                                                # [V]
+        self.EndVoltage = self.ScanOffset - 15                                                  # [V]
         self.ScanSpeed = 0.05                                                                   # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
         self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
         self.RecorderStepsize = self.ScanSpeed / self.fram_rate                                 # [V]
-        
+        self.Ch1 = 0                                                                            # 0 -> Fine in 1
+        self.Ch2 = 54                                                                           # 54 -> Laser PD
+        self.LPfilter = True                                                                    # True -> Enable, False -> Disable
+        self.Ch1_CutOff = 0.7 * self.fram_rate / 2
+        self.Ch2_CutOff = 4300
+
         """
         Mod lock-in amplifier, model DSP7265
         Reference frequency = 10 Hz
@@ -73,7 +80,7 @@ class Main:
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.gain_2f = 30                                                                       # AC Gain: 30dB
         self.TC_2f = 100E-3                                                                      # Time Constant: [s]
-        self.sens_2f = 2E-3                                                                     # Sensitivity: [V]
+        self.sens_2f = 1E-3                                                                     # Sensitivity: [V]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -114,7 +121,8 @@ class Main:
         """
         for device in self.system.devices:
             print(device, '\r')
-            nidaqmx.Task().close()
+            self.device.reset_device()
+            self.device.self_test_device()
         print('NI-cDAQ-9172 Initialized.')
 
     def config_DLCpro(self):
@@ -123,7 +131,8 @@ class Main:
         """
         self.laser.WideScan(self.OutputChannel, self.ScanOffset, self.StartVoltage,
                             self.EndVoltage, self.ScanSpeed, self.ScanShape,
-                            self.WideScanDuration, self.InputTrigger, self.RecorderStepsize)
+                            self.WideScanDuration, self.InputTrigger, self.RecorderStepsize,
+                            self.Ch1, self.Ch2, self.LPfilter, self.Ch1_CutOff, self.Ch2_CutOff)
 
     def config_Bristol(self):
         """
@@ -179,9 +188,9 @@ class Main:
         """
         print('Bristol wavelength meter is operating at EXTERNAL trigger mode...')
         with nidaqmx.Task() as task:
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line0")                               # DIO0: Gate12, Bristol
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")                               # DIO1: Gate16, lock-ins
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")                               # DIO2: Gate17, Toptica DLC pro
+            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line0")                      # DIO0: Gate12, Bristol
+            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line1")                      # DIO1: Gate16, lock-ins
+            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line2")                      # DIO2: Gate17, Toptica DLC pro
             task.start()
             i = 0
             timestamps = []
@@ -239,8 +248,8 @@ class Main:
         print('Bristol wavelength meter is operating at INTERNAL trigger mode...')
         with nidaqmx.Task() as task:
             # Logic TTL at the selected DIO channel gates
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line1")                               # DIO1: Gate16, lock-ins
-            task.do_channels.add_do_chan("cDAQ1Mod4/port0/line2")                               # DIO2: Gate17, Toptica DLC pro
+            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line1")                      # DIO1: Gate16, lock-ins
+            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line2")                      # DIO2: Gate17, Toptica DLC pro
             task.start()
             i = 0
             timestamps = []
@@ -350,7 +359,7 @@ if __name__ == "__main__":
     m.config_lock_ins()
     m.init_buffer()
     if (m.WideScanDuration / m.STR_mod > m.len_mod) or (m.WideScanDuration / m.STR_2f > m.len_2f) or (m.WideScanDuration / m.STR_dc > m.len_dc):
-        print('Number of data points exceeds buffer length.')
+        print('Number of data points exceeds lock-ins buffer length.')
         pass
     else:
         trig_mode = m.b.trigger_method(m.trig_meth)
