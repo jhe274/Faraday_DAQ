@@ -2,7 +2,7 @@ import os, sys
 from time import time, sleep, perf_counter, strftime, localtime
 from datetime import datetime as dt
 import nidaqmx.system, nidaqmx.system.storage
-from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection, DeviceNotFoundError
+from toptica.lasersdk.dlcpro.v3_0_1 import DLCpro, SerialConnection, DeviceNotFoundError
 from TopticaDLCpro.Laser import Laser
 from Bristol871.Bristol_871A import Bristol871
 from DSP7265.Lock_in_Mod import Mod
@@ -47,9 +47,9 @@ class Main:
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
         self.ScanOffset = 69                                                                    # [V]
         self.ScanAmplitude = 0                                                                  # [V]
-        self.StartVoltage = self.ScanOffset + 15                                                # [V]
-        self.EndVoltage = self.ScanOffset - 15                                                  # [V]
-        self.ScanSpeed = 0.05                                                                   # [V/s]
+        self.StartVoltage = self.ScanOffset - 1                                                # [V]
+        self.EndVoltage = self.ScanOffset + 1                                                  # [V]
+        self.ScanSpeed = 1                                                                   # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
         self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable

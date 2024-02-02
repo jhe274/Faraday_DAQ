@@ -1,6 +1,6 @@
 import sys, os, datetime
 from time import strftime, localtime
-from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection, DeviceNotFoundError
+from toptica.lasersdk.dlcpro.v3_0_1 import DLCpro, SerialConnection, DeviceNotFoundError
 from toptica.lasersdk.utils.dlcpro import * # for extract_float_arrays(...)
 
 class Laser(object):
@@ -48,7 +48,7 @@ class Laser(object):
                     dlc.laser1.recorder.inputs.channel1.low_pass_filter.cut_off_frequency.set(Ch1_CutOff)
                     dlc.laser1.recorder.inputs.channel2.low_pass_filter.cut_off_frequency.set(Ch2_CutOff)
             except DeviceNotFoundError:
-                sys.stderr.write('TOPTICA DLC pro not found')
+                sys.stderr.write('TOPTICA DLC pro not found.')
 
     def get_recorder_data(self, laser):
         """Read the data, recorded by the laser's recorder unit, into a dictionary

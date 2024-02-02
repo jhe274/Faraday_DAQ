@@ -1,4 +1,4 @@
-from toptica.lasersdk.dlcpro.v2_0_3 import DLCpro, SerialConnection
+from toptica.lasersdk.dlcpro.v3_0_1 import DLCpro, SerialConnection
 import nidaqmx.system
 import numpy as np
 from time import time, sleep
@@ -9,7 +9,7 @@ Measurement settings
 """
 rise = [True]
 fall = [False]
-scan_speed = 0.05 #V/s
+scan_speed = 1 #V/s
 start_voltage = 69 #V
 end_voltage = 71 #V
 scan_duration = np.abs(start_voltage - end_voltage) / scan_speed
