@@ -8,6 +8,8 @@ from Bristol871.Bristol_871A import Bristol871
 from DSP7265.Lock_in_Mod import Mod
 from DSP7265.Lock_in_2f import L2f
 from DSP7265.Lock_in_DC import DC
+from instruments.lakeshore import Lakeshore475
+from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 import numpy as np
 
 dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
@@ -45,11 +47,11 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 69                                                                    # [V]
+        self.ScanOffset = 70                                                                    # [V]
         self.ScanAmplitude = 0                                                                  # [V]
-        self.StartVoltage = self.ScanOffset - 1                                                # [V]
-        self.EndVoltage = self.ScanOffset + 1                                                  # [V]
-        self.ScanSpeed = 1                                                                   # [V/s]
+        self.StartVoltage = self.ScanOffset - 5                                                # [V]
+        self.EndVoltage = self.ScanOffset + 5                                                  # [V]
+        self.ScanSpeed = 5                                                                   # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
         self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
@@ -67,7 +69,7 @@ class Main:
         """
         self.mod = Mod(7)                                                                       # GPIB address: 7
         self.gain_mod = 10                                                                      # AC Gain: 0dB
-        self.TC_mod = 100E-3                                                                      # Time Constant: [s]
+        self.TC_mod = 100E-3                                                                    # Time Constant: [s]
         self.sens_mod = 200E-3                                                                  # Sensitivity: [V]
         self.len_mod = 16384                                                                    # Storage points
         self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
@@ -78,9 +80,9 @@ class Main:
         Harmonic = 2nd
         """
         self.l2f = L2f(8)                                                                       # GPIB address: 8
-        self.gain_2f = 30                                                                       # AC Gain: 30dB
+        self.gain_2f = 40                                                                       # AC Gain: 30dB
         self.TC_2f = 100E-3                                                                      # Time Constant: [s]
-        self.sens_2f = 1E-3                                                                     # Sensitivity: [V]
+        self.sens_2f = 500E-6                                                                     # Sensitivity: [V]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -90,9 +92,9 @@ class Main:
         Harmonic = 1st
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
-        self.gain_dc = 20                                                                       # AC Gain: 20dB
+        self.gain_dc = 30                                                                       # AC Gain: 20dB
         self.TC_dc = 100E-3                                                                      # Time Constant: [s]
-        self.sens_dc = 50E-3                                                                    # Sensitivity: [V]
+        self.sens_dc = 200E-6                                                                    # Sensitivity: [V]
         self.len_dc = 16384                                                                     # Storage points
         self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 

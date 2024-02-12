@@ -51,7 +51,8 @@ class Laser(object):
                 sys.stderr.write('TOPTICA DLC pro not found.')
 
     def get_recorder_data(self, laser):
-        """Read the data, recorded by the laser's recorder unit, into a dictionary
+        """
+        Read the data, recorded by the laser's recorder unit, into a dictionary
         with the following content:
         x-axis data:       'x' : {'title': _label_and_physical_unit_, 
                                 'data': _array_with_x_values_}
@@ -101,7 +102,8 @@ class Laser(object):
         return result
     
     def save_recorder_data(self, path, filename, data):
-        """Write a dictionary, returned by the get_recorder_data(..) function into
+        """
+        Write a dictionary, returned by the get_recorder_data(..) function into
         a comma separated file.
         First row will contain headers.
         First column will contain x-axis values.
