@@ -1,6 +1,6 @@
 import sys, os, datetime
 from time import strftime, localtime
-from toptica.lasersdk.dlcpro.v3_0_1 import DLCpro, SerialConnection, DeviceNotFoundError
+from toptica.lasersdk.dlcpro.v2_5_4 import DLCpro, SerialConnection, DeviceNotFoundError
 from toptica.lasersdk.utils.dlcpro import * # for extract_float_arrays(...)
 
 class Laser(object):
@@ -30,6 +30,10 @@ class Laser(object):
             """
             try:
                 with DLCpro(self.serial_port) as dlc:
+                    sn = dlc.serial_number.get()
+                    health = dlc.system_health_txt.get()
+                    print('Connection established to DLC pro with serial number ' + sn)
+                    print('System health: ' + health)
                     dlc.laser1.wide_scan.stop()
                     dlc.laser1.wide_scan.output_channel.set(OutputChannel)                  # PC Voltage
                     dlc.laser1.scan.offset.set(ScanOffset)

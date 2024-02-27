@@ -7,14 +7,14 @@ class L2f():
         
     def signal_channel(self):
         self.l2f.coupling = 0                                                   # AC coupling
-        self.l2f.imod = "voltage mode"                                          # Set to measure voltages
+        self.l2f.imode = "voltage mode"                                          # Set to measure voltages
         self.l2f.fet = 1                                                        # Use FET pre-amp
         self.l2f.shield = 1                                                     # Float shields
         self.l2f.setDifferentialMode                                            # Set to differential mode A-B
 
-    def reference_channel(self):
-        self.l2f.reference_phase = 16.92                                        # [°]
-        self.l2f.harmonic_values = 2                                            # Reference 1st harmonic
+    def reference_channel(self, phase, harmonic):
+        self.l2f.reference_phase = phase                                        # [°]
+        self.l2f.harmonic_values = harmonic                                            # Reference 1st harmonic
         self.l2f.reference = "external front"                                   # Reference channel is in the front panel
 
     def filters(self, gain, TC, sens):
@@ -25,8 +25,8 @@ class L2f():
 
     def auto_functions(self):
         self.l2f.auto_gain = 0                                                  # Auto AC Gain OFF
-        # self.l2f.auto_phase()                                                   # Auto phase
-        # self.l2f.auto_sensitivity()                                             # Auto sensitivity
+        # self.l2f.auto_phase()                                                 # Auto phase
+        # self.l2f.auto_sensitivity()                                           # Auto sensitivity
     
     def trigger_buffer(self):
         self.l2f.curve_buffer_triggered = 0                                     # Set data taking to trigger mode with one complete curve or set of curves
@@ -53,12 +53,3 @@ class L2f():
         print(f'{self.name} buffer status is ' + str(status))
 
         return X, Y, status
-    
-
-
-# L2F = L2f()
-# # L2F.Signal_channel()
-# # L2F.Reference_channel()
-# # L2F.Filters()
-# print(L2F.Curve_buffer())
-# print(type(L2F.Curve_buffer()))

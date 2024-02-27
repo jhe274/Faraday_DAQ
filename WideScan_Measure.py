@@ -2,12 +2,13 @@ import os, sys
 from time import time, sleep, perf_counter, strftime, localtime
 from datetime import datetime as dt
 import nidaqmx.system, nidaqmx.system.storage
-from toptica.lasersdk.dlcpro.v3_0_1 import DLCpro, SerialConnection, DeviceNotFoundError
+from toptica.lasersdk.dlcpro.v2_5_4 import DLCpro, SerialConnection, DeviceNotFoundError
 from TopticaDLCpro.Laser import Laser
 from Bristol871.Bristol_871A import Bristol871
-from DSP7265.Lock_in_Mod import Mod
+from DSP7265.Lock_in_1f import L1f
 from DSP7265.Lock_in_2f import L2f
 from DSP7265.Lock_in_DC import DC
+from DSP7265.Lock_in_Mod import Mod
 from instruments.lakeshore import Lakeshore475
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 import numpy as np
@@ -35,6 +36,7 @@ class Main:
         self.port_Bristol = 'COM6'                                                              # Serial port number
         self.auto_expo = 'ON'                                                                   # 'ON' or 'OFF'
         self.cali_meth = 'TEMP'                                                                 # 'TIME' or 'TEMP'
+        self.delta_temp = 5                                                                     # Delta T = 0.5°C
         self.trig_meth = 'INT'                                                                  # 'INT' or 'RISE' or 'FALL'
         self.fram_rate = 100                                                                    # [Hz]
         self.aver_stat = 'OFF'                                                                  # 'ON' or 'OFF'
@@ -47,15 +49,15 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 70                                                                    # [V]
+        self.ScanOffset = 68                                                                    # [V]
         self.ScanAmplitude = 0                                                                  # [V]
-        self.StartVoltage = self.ScanOffset - 5                                                # [V]
-        self.EndVoltage = self.ScanOffset + 5                                                  # [V]
-        self.ScanSpeed = 5                                                                   # [V/s]
+        self.StartVoltage = self.ScanOffset - 10                                                # [V]
+        self.EndVoltage = self.ScanOffset + 10                                                  # [V]
+        self.ScanSpeed = .05                                                                    # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
         self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
-        self.RecorderStepsize = self.ScanSpeed / self.fram_rate                                 # [V]
+        self.RecorderStepsize = self.ScanSpeed * self.fram_rate                                 # [V]
         self.Ch1 = 0                                                                            # 0 -> Fine in 1
         self.Ch2 = 54                                                                           # 54 -> Laser PD
         self.LPfilter = True                                                                    # True -> Enable, False -> Disable
@@ -65,14 +67,29 @@ class Main:
         """
         Mod lock-in amplifier, model DSP7265
         Reference frequency = 10 Hz
+        """
+        # self.mod = Mod(6)                                                                       # GPIB address: 7
+        # self.harm_mod = 1                                                                       # Reference Haromnic: 1st
+        # self.phase_mod = 144.37                                                                 # Reference Phase: [°]
+        # self.gain_mod = 0                                                                       # AC Gain: 0dB
+        # self.sens_mod = 1                                                                       # Sensitivity: [V]
+        # self.TC_mod = 100E-3                                                                    # Time Constant: [s]
+        # self.len_mod = 16384                                                                    # Storage points
+        # self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
+
+        """
+        1f lock-in amplifier, model DSP7265
+        Reference frequency = 50,000 Hz
         Harmonic = 1st
         """
-        self.mod = Mod(7)                                                                       # GPIB address: 7
-        self.gain_mod = 10                                                                      # AC Gain: 0dB
-        self.TC_mod = 100E-3                                                                    # Time Constant: [s]
-        self.sens_mod = 200E-3                                                                  # Sensitivity: [V]
-        self.len_mod = 16384                                                                    # Storage points
-        self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
+        self.l1f = L1f(7)                                                                       # GPIB address: 7
+        self.harm_1f = 1                                                                        # Reference Haromnic: 1st
+        self.phase_1f = -68.12                                                                  # Reference Phase: [°]
+        self.gain_1f = 20                                                                       # AC Gain: 10dB
+        self.sens_1f = 100E-6                                                                   # Sensitivity: [V]
+        self.TC_1f = 100E-3                                                                     # Time Constant: [s]
+        self.len_1f = 16384                                                                     # Storage points
+        self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
         """
         2f lock-in amplifier, model DSP7265
@@ -80,9 +97,11 @@ class Main:
         Harmonic = 2nd
         """
         self.l2f = L2f(8)                                                                       # GPIB address: 8
-        self.gain_2f = 40                                                                       # AC Gain: 30dB
-        self.TC_2f = 100E-3                                                                      # Time Constant: [s]
+        self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
+        self.phase_2f = -46.27                                                                  # Reference Phase: [°]
+        self.gain_2f = 20                                                                       # AC Gain: 10dB
         self.sens_2f = 500E-6                                                                     # Sensitivity: [V]
+        self.TC_2f = 100E-3                                                                     # Time Constant: [s]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -92,9 +111,11 @@ class Main:
         Harmonic = 1st
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
-        self.gain_dc = 30                                                                       # AC Gain: 20dB
-        self.TC_dc = 100E-3                                                                      # Time Constant: [s]
-        self.sens_dc = 200E-6                                                                    # Sensitivity: [V]
+        self.harm_dc = 1                                                                        # Reference Haromnic: 1st
+        self.phase_dc = 69.61                                                                   # Reference Phase: [°]
+        self.gain_dc = 10                                                                       # AC Gain: 0dB
+        self.sens_dc = 100e-3                                                                   # Sensitivity: [V]
+        self.TC_dc = 100E-3                                                                     # Time Constant: [s]
         self.len_dc = 16384                                                                     # Storage points
         self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -123,9 +144,12 @@ class Main:
         """
         for device in self.system.devices:
             print(device, '\r')
-            self.device.reset_device()
-            self.device.self_test_device()
-        print('NI-cDAQ-9172 Initialized.')
+            if device.name == self.NI_channel:
+                device_found = True
+                self.device.reset_device()
+                self.device.self_test_device()
+        if device_found:
+            print(f'NI-cDAQ-9172 {self.NI_channel} Initialized.')
 
     def config_DLCpro(self):
         """
@@ -149,7 +173,7 @@ class Main:
         print('Detector type =          ', self.b.detector('CW'))                               # Detector type = CW
         print('Auto exposure =          ', self.b.auto_expo(self.auto_expo))
         print('Calibration method =     ', self.b.calib_method(self.cali_meth))
-        self.b.calib_temp(5)                                                                    # Temperature delta = 0.5°C
+        self.b.calib_temp(self.delta_temp)                                                      # Temperature delta = 0.5°C
         print('Trigger method =         ', self.b.trigger_method(self.trig_meth))
         if self.trig_meth == 'INT':
             print('Frame rate =             ', self.b.frame_rate(self.fram_rate), 'Hz\n')
@@ -163,10 +187,18 @@ class Main:
         """
         Configure triple modulation lock-ins and set buffer to trigger mode
         """
-        self.mod.filters(self.gain_mod, self.TC_mod, self.sens_mod)
+        # self.mod.reference_channel(self.phase_mod, self.harm_mod)
+        self.l1f.reference_channel(self.phase_1f, self.harm_1f)
+        self.l2f.reference_channel(self.phase_2f, self.harm_2f)
+        self.dc.reference_channel(self.phase_dc, self.harm_dc)
+
+        # self.mod.filters(self.gain_mod, self.TC_mod, self.sens_mod)
+        self.l1f.filters(self.gain_1f, self.TC_1f, self.sens_1f)
         self.l2f.filters(self.gain_2f, self.TC_2f, self.sens_2f)
         self.dc.filters(self.gain_dc, self.TC_dc, self.sens_dc)
-        self.mod.trigger_buffer()
+
+        # self.mod.trigger_buffer()
+        self.l1f.trigger_buffer()
         self.l2f.trigger_buffer()
         self.dc.trigger_buffer()
     
@@ -174,7 +206,8 @@ class Main:
         """
         Initialize triple modulation lock-in buffers
         """
-        self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
+        # self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
+        self.l1f.init_curve_buffer(self.len_1f, self.STR_1f)
         self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
         self.dc.init_curve_buffer(self.len_dc, self.STR_dc)
         
@@ -221,7 +254,8 @@ class Main:
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.EXT_peri):4d}", 's', end='')
                     sleep(self.EXT_L)
                     print()
-                    self.mod.halt_buffer()
+                    # self.mod.halt_buffer()
+                    self.l1f.halt_buffer()
                     self.l2f.halt_buffer()
                     self.dc.halt_buffer()
                     self.b.buffer('CLOS')
@@ -274,7 +308,8 @@ class Main:
                             pass
                         i = i + 1
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.INT_peri):4d}", 's', end='')
-                    self.mod.halt_buffer()
+                    # self.mod.halt_buffer()
+                    self.l1f.halt_buffer()
                     self.l2f.halt_buffer()
                     self.dc.halt_buffer()
                     self.b.buffer('CLOS')
@@ -299,8 +334,8 @@ class Main:
         Retrieve data from lock-in buffers
         """
         print('\nRetrieving data from Lock-ins buffer...')
-        buffers = [self.mod, self.l2f, self.dc]
-        sensors = [self.sens_mod, self.sens_2f, self.sens_dc]
+        buffers = [self.l1f, self.l2f, self.dc]
+        sensors = [self.sens_1f, self.sens_2f, self.sens_dc]
         
         data = []
         buffer_status = []
@@ -334,13 +369,13 @@ class Main:
             file_path = os.path.join(folder_path, filename)
 
             with open(file_path, "w") as log:
-                for attribute, value in zip(['TC_mod[s]', 'SENS_mod[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]'],
-                                            [self.TC_mod, self.sens_mod, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc]):
+                for attribute, value in zip(['TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]'],
+                                            [self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc]):
                     log.write(f'#{attribute} {value}\n')
 
                 log.write('#Field Input Voltage\n')
                 log.write('#Preamp gain\n')
-                header = 'Timestamp,X_mod,Y_mod,X_2f,Y_2f,X_dc,Y_dc\n'
+                header = 'Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc\n'
                 log.write(header)
 
                 for row in zip(*data):
@@ -360,7 +395,7 @@ if __name__ == "__main__":
     m.config_Bristol()
     m.config_lock_ins()
     m.init_buffer()
-    if (m.WideScanDuration / m.STR_mod > m.len_mod) or (m.WideScanDuration / m.STR_2f > m.len_2f) or (m.WideScanDuration / m.STR_dc > m.len_dc):
+    if (m.WideScanDuration / m.STR_1f > m.len_1f) or (m.WideScanDuration / m.STR_2f > m.len_2f) or (m.WideScanDuration / m.STR_dc > m.len_dc):
         print('Number of data points exceeds lock-ins buffer length.')
         pass
     else:

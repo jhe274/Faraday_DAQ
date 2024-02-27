@@ -8,7 +8,7 @@
 
 
 from __future__ import print_function
-from example1 import Bristol871
+from RS422_RealTime_example1 import Bristol871
 from sys import exit
 import os
 

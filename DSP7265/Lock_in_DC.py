@@ -7,14 +7,14 @@ class DC:
         
     def signal_channel(self):
         self.dc.coupling = 0                                                    # AC coupling
-        self.dc.imod = "voltage mode"                                           # Set to measure voltages
+        self.dc.imode = "voltage mode"                                          # Set to measure voltages
         self.dc.fet = 1                                                         # Use fet pre-amp
         self.dc.shield = 1                                                      # Float shields
-        # self.dc.setDifferentialMode                                             # Set to differential mode A-B
+        # self.dc.setDifferentialMode                                           # Set to differential mode A-B
 
-    def reference_channel(self):
-        self.dc.reference_phase = -21.27                                        # [°]
-        self.dc.harmonic_values = 1                                             # Reference 1st harmonic
+    def reference_channel(self, phase, harmonic):
+        self.dc.reference_phase = phase                                        # [°]
+        self.dc.harmonic_values = harmonic                                             # Reference 1st harmonic
         self.dc.reference = "external front"                                    # Reference channel is in the front panel
 
     def filters(self, gain, TC, sens):
@@ -25,8 +25,8 @@ class DC:
 
     def auto_functions(self):
         self.dc.auto_gain = 0                                                   # Auto AC Gain OFF
-        # self.dc.auto_phase()                                                    # Auto phase
-        # self.dc.auto_sensitivity()                                              # Auto sensitivity
+        # self.dc.auto_phase()                                                  # Auto phase
+        # self.dc.auto_sensitivity()                                            # Auto sensitivity
 
     def trigger_buffer(self):
         self.dc.curve_buffer_triggered = 0                                      # Set data taking to trigger mode with one complete curve or set of curves

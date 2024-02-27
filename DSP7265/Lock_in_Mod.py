@@ -7,14 +7,14 @@ class Mod:
         
     def signal_channel(self):
         self.mod.coupling = 0                                                   # AC coupling
-        self.mod.imod = "voltage mode"                                          # Set to measure voltages
+        self.mod.imode = "voltage mode"                                         # Set to measure voltages
         self.mod.fet = 0                                                        # Use Bipolar pre-amp
         self.mod.shield = 1                                                     # Float shields
         self.mod.setDifferentialMode                                            # Set to differential mode A-B
 
-    def reference_channel(self):
-        self.mod.reference_phase = 144.37                                       # [°]
-        self.mod.harmonic_values = 1                                            # Reference 1st harmonic
+    def reference_channel(self, phase, harmonic):
+        self.mod.reference_phase = phase                                        # [°]
+        self.mod.harmonic_values = harmonic                                     # Reference 1st harmonic
         self.mod.reference = "external front"                                   # Reference channel is in the front panel
 
     def filters(self, gain, TC, sens):
