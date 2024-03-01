@@ -22,10 +22,10 @@ class Bristol871(object):
         self.dev_addr = ip_addr
         self.tn = Telnet(ip_addr, 23)
         print()
-        [self.readline() for i in range(8)]                                     # flushes the telnet header
+        [self.readline() for i in range(8)]                                                     # flushes the telnet header
         if not quiet:
-            self.tn.write(b'*IDN?\r\n')                                       # Perform a test communication
-            print(self.readline(),'\n')                                         # and read the result to the terminal
+            self.tn.write(b'*IDN?\r\n')                                                         # Perform a test communication
+            print(self.readline(),'\n')                                                         # and read the result to the terminal
     
     def readline(self):
         response = self.tn.read_until(b'\n', timeout=3).decode('utf-8')

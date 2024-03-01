@@ -49,7 +49,7 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 68                                                                    # [V]
+        self.ScanOffset = 66                                                                    # [V]
         self.ScanAmplitude = 0                                                                  # [V]
         self.StartVoltage = self.ScanOffset - 10                                                # [V]
         self.EndVoltage = self.ScanOffset + 10                                                  # [V]
@@ -80,42 +80,39 @@ class Main:
         """
         1f lock-in amplifier, model DSP7265
         Reference frequency = 50,000 Hz
-        Harmonic = 1st
         """
         self.l1f = L1f(7)                                                                       # GPIB address: 7
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
-        self.phase_1f = -68.12                                                                  # Reference Phase: [°]
-        self.gain_1f = 20                                                                       # AC Gain: 10dB
+        self.phase_1f = -90.13                                                                 # Reference Phase: [°]
+        self.gain_1f = 20                                                                       # AC Gain: [dB]
         self.sens_1f = 100E-6                                                                   # Sensitivity: [V]
-        self.TC_1f = 100E-3                                                                     # Time Constant: [s]
+        self.TC_1f = 10E-3                                                                      # Time Constant: [s]
         self.len_1f = 16384                                                                     # Storage points
         self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
         """
         2f lock-in amplifier, model DSP7265
         Reference frequency = 50,000 Hz
-        Harmonic = 2nd
         """
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
         self.phase_2f = -46.27                                                                  # Reference Phase: [°]
-        self.gain_2f = 20                                                                       # AC Gain: 10dB
-        self.sens_2f = 500E-6                                                                     # Sensitivity: [V]
-        self.TC_2f = 100E-3                                                                     # Time Constant: [s]
+        self.gain_2f = 20                                                                       # AC Gain: [dB]
+        self.sens_2f = 500E-6                                                                   # Sensitivity: [V]
+        self.TC_2f = 10E-3                                                                      # Time Constant: [s]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
         """
         DC lock-in amplifier, model DSP7265
         Reference frequency = 977 Hz
-        Harmonic = 1st
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
         self.harm_dc = 1                                                                        # Reference Haromnic: 1st
         self.phase_dc = 69.61                                                                   # Reference Phase: [°]
-        self.gain_dc = 10                                                                       # AC Gain: 0dB
+        self.gain_dc = 10                                                                       # AC Gain: [dB]
         self.sens_dc = 100e-3                                                                   # Sensitivity: [V]
-        self.TC_dc = 100E-3                                                                     # Time Constant: [s]
+        self.TC_dc = 10E-3                                                                      # Time Constant: [s]
         self.len_dc = 16384                                                                     # Storage points
         self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -142,14 +139,21 @@ class Main:
         """
         NI-cDAQ-9172, using Mod4 for trigger signal control
         """
+        device_found = False
         for device in self.system.devices:
-            print(device, '\r')
             if device.name == self.NI_channel:
                 device_found = True
-                self.device.reset_device()
-                self.device.self_test_device()
-        if device_found:
-            print(f'NI-cDAQ-9172 {self.NI_channel} Initialized.')
+                try:
+                    device.reset_device()
+                    device.self_test_device()
+                    print(f'NI-cDAQ-9172 {self.NI_channel} Initialized.\n')
+                except Exception as e:
+                    print(f"Error initializing NI-cDAQ-9172 {self.NI_channel}: {e}")
+                    sys.exit(1)                                                                 # Abort script execution
+        
+        if not device_found:
+            print(f"NI-cDAQ-9172 {self.NI_channel} not found.")
+            sys.exit(1)
 
     def config_DLCpro(self):
         """
@@ -168,7 +172,7 @@ class Main:
             self.b = Bristol871(self.port_Bristol)
         except Exception as e:
             print('Could not connect to Bristol871 wavelength meter: {}\n'.format(e))
-            exit(1)
+            sys.exit(1)
             
         print('Detector type =          ', self.b.detector('CW'))                               # Detector type = CW
         print('Auto exposure =          ', self.b.auto_expo(self.auto_expo))

@@ -41,9 +41,9 @@ class DC:
             interval corresponds to the Time/Point option in Curve Buffer Menu
             min = 1.25 ms/point, and if TC >= 5 ms, then interval = 640 micros
         """
-        print(f'{self.name} buffer initialized.')
         self.dc.set_buffer(points=LEN, quantities=None, interval=STR)
         self.dc.init_curve_buffer()
+        print(f'{self.name} buffer initialized.')
     
     def get_curve_buffer(self, sens):
         raw = self.dc.get_buffer(quantity=None, convert_to_float=False, wait_for_buffer=True)
