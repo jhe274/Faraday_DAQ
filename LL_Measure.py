@@ -44,27 +44,6 @@ class Main:
         self.aver_coun = 20
 
         """
-        TOPTICA DLC pro
-        """
-        self.dlc_port = 'COM5'                                                                  # Serial port number
-        self.laser = Laser(self.dlc_port)
-        self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 71                                                                    # [V]
-        self.ScanAmplitude = 0                                                                  # [V]
-        self.StartVoltage = self.ScanOffset + 10                                                # [V]
-        self.EndVoltage = self.ScanOffset - 10                                                  # [V]
-        self.ScanSpeed = .05                                                                    # [V/s]
-        self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
-        self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
-        self.InputTrigger = True                                                                # True -> Enable, False -> Disable
-        self.RecorderStepsize = self.ScanSpeed * self.fram_rate                                 # [V]
-        self.Ch1 = 0                                                                            # 0 -> Fine in 1
-        self.Ch2 = 54                                                                           # 54 -> Laser PD
-        self.LPfilter = True                                                                    # True -> Enable, False -> Disable
-        self.Ch1_CutOff = 0.7 * self.fram_rate / 2
-        self.Ch2_CutOff = 4300
-
-        """
         Mod lock-in amplifier, model DSP7265
         Reference frequency = 10 Hz
         """
@@ -83,9 +62,9 @@ class Main:
         """
         self.l1f = L1f(7)                                                                       # GPIB address: 7
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
-        self.phase_1f = -89.99                                                                  # Reference Phase: [°]
-        self.gain_1f = 20                                                                       # AC Gain: [dB]
-        self.sens_1f = 100E-6                                                                   # Sensitivity: [V]
+        self.phase_1f = 21.35                                                                   # Reference Phase: [°]
+        self.gain_1f = 10                                                                       # AC Gain: [dB]
+        self.sens_1f = 1E-3                                                                     # Sensitivity: [V]
         self.TC_1f = 50E-3                                                                      # Time Constant: [s]
         self.len_1f = 16384                                                                     # Storage points
         self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -96,9 +75,9 @@ class Main:
         """
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
-        self.phase_2f = 131.58                                                                  # Reference Phase: [°]
-        self.gain_2f = 20                                                                       # AC Gain: [dB]
-        self.sens_2f = 200E-6                                                                   # Sensitivity: [V]
+        self.phase_2f = 134.42                                                                  # Reference Phase: [°]
+        self.gain_2f = 10                                                                       # AC Gain: [dB]
+        self.sens_2f = 200E-3                                                                   # Sensitivity: [V]
         self.TC_2f = 50E-3                                                                      # Time Constant: [s]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -109,7 +88,7 @@ class Main:
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
         self.harm_dc = 1                                                                        # Reference Haromnic: 1st
-        self.phase_dc = 65.37                                                                   # Reference Phase: [°]
+        self.phase_dc = 78.64                                                                   # Reference Phase: [°]
         self.gain_dc = 10                                                                       # AC Gain: [dB]
         self.sens_dc = 200e-3                                                                   # Sensitivity: [V]
         self.TC_dc = 50E-3                                                                      # Time Constant: [s]
@@ -123,10 +102,11 @@ class Main:
         """
         self.EXT_H = 0.005                                                                      # 5ms pulse
         self.EXT_L = 0.005                                                                      # send every 5ms
+        self.MeasureDuration = 10                                                               # [s]
         self.INT_peri = 1 / self.fram_rate                                                      # Bristol measurement period while using EXTERNAL trigger
         self.EXT_peri = self.EXT_H + self.EXT_L                                                 # Bristol measurement period while using EXTERNAL trigger
-        self.INT_NPeri = int(self.WideScanDuration / self.INT_peri)                             # Number of periods while using INTERNAL trigger
-        self.EXT_NPeri = int(self.WideScanDuration / self.EXT_peri)                             # Number of periods while using EXTERNAL trigger
+        self.INT_NPeri = int(self.MeasureDuration / self.INT_peri)                              # Number of periods while using INTERNAL trigger
+        self.EXT_NPeri = int(self.MeasureDuration / self.EXT_peri)                              # Number of periods while using EXTERNAL trigger
         self.INT_times = [ (i*self.INT_peri) for i in range(self.INT_NPeri) ]                   # Measurement time array while using INTERNAL trigger
         self.EXT_times = [ (i*self.EXT_peri) for i in range(self.EXT_NPeri) ]                   # Measurement time array while using EXTERNAL trigger
         self.INT_rise = [True, True]
@@ -146,7 +126,7 @@ class Main:
                 try:
                     device.reset_device()
                     device.self_test_device()
-                    print(f'NI-cDAQ-9172 {self.NI_channel} Initialized.\n')
+                    print(f'NI-cDAQ-9172 {self.NI_channel} Initialized.')
                 except Exception as e:
                     print(f"Error initializing NI-cDAQ-9172 {self.NI_channel}: {e}")
                     sys.exit(1)                                                                 # Abort script execution
@@ -154,15 +134,6 @@ class Main:
         if not device_found:
             print(f"NI-cDAQ-9172 {self.NI_channel} not found.")
             sys.exit(1)
-
-    def config_DLCpro(self):
-        """
-        TOPTICA DLC pro
-        """
-        self.laser.WideScan(self.OutputChannel, self.ScanOffset, self.StartVoltage,
-                            self.EndVoltage, self.ScanSpeed, self.ScanShape,
-                            self.WideScanDuration, self.InputTrigger, self.RecorderStepsize,
-                            self.Ch1, self.Ch2, self.LPfilter, self.Ch1_CutOff, self.Ch2_CutOff)
 
     def config_Bristol(self):
         """
@@ -229,48 +200,39 @@ class Main:
         with nidaqmx.Task() as task:
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line0")                      # DIO0: Gate12, Bristol
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line1")                      # DIO1: Gate16, lock-ins
-            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line2")                      # DIO2: Gate17, Toptica DLC pro
             task.start()
             i = 0
             timestamps = []
             timestamps_before_rise = []
             timestamps_after_rise = []
-            try:
-                with DLCpro(SerialConnection(self.dlc_port)) as dlcpro:
-                    dlcpro.laser1.wide_scan.start()
-                    print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
-                    self.countdown(5)
-                    print("\n=============== Wide Scan Initiated ===============")
-                    self.b.buffer('OPEN')
-                    while i < self.EXT_NPeri:
-                        if i == 0:
-                            t0 = perf_counter()
-                        while perf_counter() - t0 < self.EXT_times[i]:
-                            pass
-                        timestamps_before_rise.append(time())
-                        task.write(self.EXT_rise)
-                        timestamps_after_rise.append(time())
-                        t1 = perf_counter()
-                        while perf_counter() - t1 < (self.EXT_H):
-                            pass
-                        task.write(self.EXT_fall)
-                        i = i + 1
-                        print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.EXT_peri):4d}", 's', end='')
-                    sleep(self.EXT_L)
-                    print()
-                    # self.mod.halt_buffer()
-                    self.l1f.halt_buffer()
-                    self.l2f.halt_buffer()
-                    self.dc.halt_buffer()
-                    self.b.buffer('CLOS')
-                    elap_time = perf_counter() - t0
-                    task.write(self.All_fall)
-                    print("=============== Wide Scan Completed ===============")
-                    dlcpro.laser1.wide_scan.stop()
-                    result = self.laser.get_recorder_data(dlcpro.laser1)
-                    self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
-            except DeviceNotFoundError:
-                sys.stderr.write('TOPTICA DLC pro not found')
+            print(f'Measurement duration =   {int(self.MeasureDuration):4d}', 's')
+            self.countdown(5)
+            print("\n=============== Measurement Initiated ===============")
+            self.b.buffer('OPEN')
+            while i < self.EXT_NPeri:
+                if i == 0:
+                    t0 = perf_counter()
+                while perf_counter() - t0 < self.EXT_times[i]:
+                    pass
+                timestamps_before_rise.append(time())
+                task.write(self.EXT_rise)
+                timestamps_after_rise.append(time())
+                t1 = perf_counter()
+                while perf_counter() - t1 < (self.EXT_H):
+                    pass
+                task.write(self.EXT_fall)
+                i = i + 1
+                print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.EXT_peri):4d}", 's', end='')
+            sleep(self.EXT_L)
+            print()
+            # self.mod.halt_buffer()
+            self.l1f.halt_buffer()
+            self.l2f.halt_buffer()
+            self.dc.halt_buffer()
+            self.b.buffer('CLOS')
+            elap_time = perf_counter() - t0
+            task.write(self.All_fall)
+            print("=============== Measurement Completed ===============")
             print(f'{self.EXT_NPeri} periods of {self.EXT_peri} seconds')
             task.stop()
             start_time = (timestamps_before_rise[0]+timestamps_after_rise[0]) / 2
@@ -289,42 +251,33 @@ class Main:
         with nidaqmx.Task() as task:
             # Logic TTL at the selected DIO channel gates
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line1")                      # DIO1: Gate16, lock-ins
-            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line2")                      # DIO2: Gate17, Toptica DLC pro
             task.start()
             i = 0
             timestamps = []
-            try:
-                with DLCpro(SerialConnection(self.dlc_port)) as dlcpro:
-                    dlcpro.laser1.wide_scan.start()
-                    print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
-                    self.countdown(5)
-                    print("\n=============== Wide Scan Initiated ===============")
-                    self.b.buffer('OPEN')
-                    start_time = time()
-                    task.write(self.INT_rise)
-                    while i < self.INT_NPeri:
-                        if i == 0:
-                            t0 = perf_counter()
-                        while perf_counter() - t0 < self.INT_times[i]:
-                            pass
-                        t1 = perf_counter()
-                        while perf_counter() - t1 < (self.INT_peri/2):
-                            pass
-                        i = i + 1
-                        print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.INT_peri):4d}", 's', end='')
-                    # self.mod.halt_buffer()
-                    self.l1f.halt_buffer()
-                    self.l2f.halt_buffer()
-                    self.dc.halt_buffer()
-                    self.b.buffer('CLOS')
-                    elap_time = perf_counter() - t0
-                    task.write(self.INT_fall)
-                    print("\n=============== Wide Scan Completed ===============")
-                    dlcpro.laser1.wide_scan.stop()
-                    result = self.laser.get_recorder_data(dlcpro.laser1)
-                    self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
-            except DeviceNotFoundError:
-                sys.stderr.write('TOPTICA DLC pro not found')
+            print(f'Measurement duration =   {int(self.MeasureDuration):4d}', 's')
+            # self.countdown(5)
+            print("\n=============== Measurement Initiated ===============")
+            self.b.buffer('OPEN')
+            start_time = time()
+            task.write(self.INT_rise)
+            while i < self.INT_NPeri:
+                if i == 0:
+                    t0 = perf_counter()
+                while perf_counter() - t0 < self.INT_times[i]:
+                    pass
+                t1 = perf_counter()
+                while perf_counter() - t1 < (self.INT_peri/2):
+                    pass
+                i = i + 1
+                print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.INT_peri):4d}", 's', end='')
+            # self.mod.halt_buffer()
+            self.l1f.halt_buffer()
+            self.l2f.halt_buffer()
+            self.dc.halt_buffer()
+            self.b.buffer('CLOS')
+            elap_time = perf_counter() - t0
+            task.write(self.INT_fall)
+            print("=============== Measurement Completed ===============")
             task.stop()
             timestamp = [start_time + INT_time for INT_time in self.INT_times]
             for j in range(self.INT_NPeri):
@@ -395,11 +348,10 @@ class Main:
 if __name__ == "__main__":
     m = Main()
     m.config_NIcDAQ()
-    m.config_DLCpro()
     m.config_Bristol()
     m.config_lock_ins()
     m.init_buffer()
-    if (m.WideScanDuration / m.STR_1f > m.len_1f) or (m.WideScanDuration / m.STR_2f > m.len_2f) or (m.WideScanDuration / m.STR_dc > m.len_dc):
+    if (m.MeasureDuration / m.STR_1f > m.len_1f) or (m.MeasureDuration / m.STR_2f > m.len_2f) or (m.MeasureDuration / m.STR_dc > m.len_dc):
         print('Number of data points exceeds lock-ins buffer length.')
         pass
     else:
