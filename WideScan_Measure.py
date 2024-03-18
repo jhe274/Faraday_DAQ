@@ -2,7 +2,7 @@ import os, sys
 from time import time, sleep, perf_counter, strftime, localtime
 from datetime import datetime as dt
 import nidaqmx.system, nidaqmx.system.storage
-from toptica.lasersdk.dlcpro.v2_5_4 import DLCpro, SerialConnection, DeviceNotFoundError
+from toptica.lasersdk.dlcpro.v2_5_3 import DLCpro, SerialConnection, DeviceNotFoundError
 from TopticaDLCpro.Laser import Laser
 from Bristol871.Bristol_871A import Bristol871
 from DSP7265.Lock_in_1f import L1f
@@ -49,11 +49,11 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 71                                                                    # [V]
+        self.ScanOffset = 55.000000                                                             # [V]
         self.ScanAmplitude = 0                                                                  # [V]
         self.StartVoltage = self.ScanOffset + 10                                                # [V]
         self.EndVoltage = self.ScanOffset - 10                                                  # [V]
-        self.ScanSpeed = .05                                                                    # [V/s]
+        self.ScanSpeed = 0.05                                                                   # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
         self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
@@ -83,9 +83,9 @@ class Main:
         """
         self.l1f = L1f(7)                                                                       # GPIB address: 7
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
-        self.phase_1f = -89.99                                                                  # Reference Phase: [°]
+        self.phase_1f = 75.94                                                                   # Reference Phase: [°]
         self.gain_1f = 20                                                                       # AC Gain: [dB]
-        self.sens_1f = 100E-6                                                                   # Sensitivity: [V]
+        self.sens_1f = 500E-6                                                                   # Sensitivity: [V]
         self.TC_1f = 50E-3                                                                      # Time Constant: [s]
         self.len_1f = 16384                                                                     # Storage points
         self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]

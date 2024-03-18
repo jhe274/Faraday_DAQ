@@ -1,6 +1,6 @@
 import sys, os, datetime
 from time import strftime, localtime
-from toptica.lasersdk.dlcpro.v2_5_4 import DLCpro, SerialConnection, DeviceNotFoundError
+from toptica.lasersdk.dlcpro.v2_5_3 import DLCpro, SerialConnection, DeviceNotFoundError
 from toptica.lasersdk.utils.dlcpro import * # for extract_float_arrays(...)
 
 class Laser(object):
