@@ -49,10 +49,10 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 55.000000                                                             # [V]
+        self.ScanOffset = 67.450000                                                             # [V]
         self.ScanAmplitude = 0                                                                  # [V]
-        self.StartVoltage = self.ScanOffset + 10                                                # [V]
-        self.EndVoltage = self.ScanOffset - 10                                                  # [V]
+        self.StartVoltage = self.ScanOffset - 10                                                # [V]
+        self.EndVoltage = self.ScanOffset + 10                                                  # [V]
         self.ScanSpeed = 0.05                                                                   # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
         self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
@@ -85,8 +85,8 @@ class Main:
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
         self.phase_1f = 75.94                                                                   # Reference Phase: [°]
         self.gain_1f = 20                                                                       # AC Gain: [dB]
-        self.sens_1f = 500E-6                                                                   # Sensitivity: [V]
-        self.TC_1f = 50E-3                                                                      # Time Constant: [s]
+        self.sens_1f = 100E-6                                                                     # Sensitivity: [V]
+        self.TC_1f = 100E-3                                                                     # Time Constant: [s]
         self.len_1f = 16384                                                                     # Storage points
         self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -98,8 +98,8 @@ class Main:
         self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
         self.phase_2f = 131.58                                                                  # Reference Phase: [°]
         self.gain_2f = 20                                                                       # AC Gain: [dB]
-        self.sens_2f = 200E-6                                                                   # Sensitivity: [V]
-        self.TC_2f = 50E-3                                                                      # Time Constant: [s]
+        self.sens_2f = 100E-6                                                                     # Sensitivity: [V]
+        self.TC_2f = 100E-3                                                                     # Time Constant: [s]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -109,10 +109,10 @@ class Main:
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
         self.harm_dc = 1                                                                        # Reference Haromnic: 1st
-        self.phase_dc = 65.37                                                                   # Reference Phase: [°]
+        self.phase_dc = 72.90                                                                   # Reference Phase: [°]
         self.gain_dc = 10                                                                       # AC Gain: [dB]
-        self.sens_dc = 200e-3                                                                   # Sensitivity: [V]
-        self.TC_dc = 50E-3                                                                      # Time Constant: [s]
+        self.sens_dc = 100e-3                                                                   # Sensitivity: [V]
+        self.TC_dc = 100E-3                                                                     # Time Constant: [s]
         self.len_dc = 16384                                                                     # Storage points
         self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
@@ -186,7 +186,8 @@ class Main:
             # print('Average count =          ', self.b.average_count(self.aver_coun))
         else:
             print('Frame rate =             ', round(1/self.EXT_peri), 'Hz\n')
-        
+        self.b.calib()                                                              # Calibrate Bristol before the measurement
+
     def config_lock_ins(self):
         """
         Configure triple modulation lock-ins and set buffer to trigger mode

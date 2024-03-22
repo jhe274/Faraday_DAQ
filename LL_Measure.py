@@ -62,7 +62,7 @@ class Main:
         """
         self.l1f = L1f(7)                                                                       # GPIB address: 7
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
-        self.phase_1f = 21.35                                                                   # Reference Phase: [°]
+        self.phase_1f = 75.94                                                                   # Reference Phase: [°]
         self.gain_1f = 10                                                                       # AC Gain: [dB]
         self.sens_1f = 1E-3                                                                     # Sensitivity: [V]
         self.TC_1f = 50E-3                                                                      # Time Constant: [s]
@@ -75,7 +75,7 @@ class Main:
         """
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
-        self.phase_2f = 134.42                                                                  # Reference Phase: [°]
+        self.phase_2f = 131.58                                                                  # Reference Phase: [°]
         self.gain_2f = 10                                                                       # AC Gain: [dB]
         self.sens_2f = 200E-3                                                                   # Sensitivity: [V]
         self.TC_2f = 50E-3                                                                      # Time Constant: [s]
@@ -88,7 +88,7 @@ class Main:
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
         self.harm_dc = 1                                                                        # Reference Haromnic: 1st
-        self.phase_dc = 78.64                                                                   # Reference Phase: [°]
+        self.phase_dc = 65.37                                                                   # Reference Phase: [°]
         self.gain_dc = 10                                                                       # AC Gain: [dB]
         self.sens_dc = 200e-3                                                                   # Sensitivity: [V]
         self.TC_dc = 50E-3                                                                      # Time Constant: [s]
