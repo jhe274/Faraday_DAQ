@@ -49,7 +49,7 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 67.450000                                                             # [V]
+        self.ScanOffset = 59.500000                                                             # [V]
         self.ScanAmplitude = 0                                                                  # [V]
         self.StartVoltage = self.ScanOffset - 10                                                # [V]
         self.EndVoltage = self.ScanOffset + 10                                                  # [V]
@@ -83,9 +83,9 @@ class Main:
         """
         self.l1f = L1f(7)                                                                       # GPIB address: 7
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
-        self.phase_1f = 75.94                                                                   # Reference Phase: [°]
-        self.gain_1f = 20                                                                       # AC Gain: [dB]
-        self.sens_1f = 100E-6                                                                     # Sensitivity: [V]
+        self.phase_1f = 52.04                                                                   # Reference Phase: [°]
+        self.gain_1f = 10                                                                       # AC Gain: [dB]
+        self.sens_1f = 5E-3                                                                     # Sensitivity: [V]
         self.TC_1f = 100E-3                                                                     # Time Constant: [s]
         self.len_1f = 16384                                                                     # Storage points
         self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -96,9 +96,9 @@ class Main:
         """
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
-        self.phase_2f = 131.58                                                                  # Reference Phase: [°]
-        self.gain_2f = 20                                                                       # AC Gain: [dB]
-        self.sens_2f = 100E-6                                                                     # Sensitivity: [V]
+        self.phase_2f = 15.92                                                                   # Reference Phase: [°]
+        self.gain_2f = 10                                                                       # AC Gain: [dB]
+        self.sens_2f = 5E-3                                                                     # Sensitivity: [V]
         self.TC_2f = 100E-3                                                                     # Time Constant: [s]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -109,9 +109,9 @@ class Main:
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
         self.harm_dc = 1                                                                        # Reference Haromnic: 1st
-        self.phase_dc = 72.90                                                                   # Reference Phase: [°]
-        self.gain_dc = 10                                                                       # AC Gain: [dB]
-        self.sens_dc = 100e-3                                                                   # Sensitivity: [V]
+        self.phase_dc = 68.75                                                                   # Reference Phase: [°]
+        self.gain_dc = 0                                                                        # AC Gain: [dB]
+        self.sens_dc = 500E-3                                                                   # Sensitivity: [V]
         self.TC_dc = 100E-3                                                                     # Time Constant: [s]
         self.len_dc = 16384                                                                     # Storage points
         self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -322,8 +322,8 @@ class Main:
                     task.write(self.INT_fall)
                     print("\n=============== Wide Scan Completed ===============")
                     dlcpro.laser1.wide_scan.stop()
-                    result = self.laser.get_recorder_data(dlcpro.laser1)
-                    self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
+                    # result = self.laser.get_recorder_data(dlcpro.laser1)
+                    # self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
             task.stop()
