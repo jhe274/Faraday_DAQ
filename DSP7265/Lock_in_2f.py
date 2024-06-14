@@ -25,8 +25,8 @@ class L2f():
 
     def auto_functions(self):
         self.l2f.auto_gain = 0                                                  # Auto AC Gain OFF
-        # self.l2f.auto_phase()                                                 # Auto phase
-        # self.l2f.auto_sensitivity()                                           # Auto sensitivity
+        self.l2f.auto_phase()                                                   # Auto phase
+        # self.l2f.auto_sensitivity()                                             # Auto sensitivity
     
     def trigger_buffer(self):
         self.l2f.curve_buffer_triggered = 0                                     # Set data taking to trigger mode with one complete curve or set of curves

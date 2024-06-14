@@ -13,7 +13,7 @@ class DC:
         # self.dc.setDifferentialMode                                           # Set to differential mode A-B
 
     def reference_channel(self, phase, harmonic):
-        self.dc.reference_phase = phase                                        # [°]
+        self.dc.reference_phase = phase                                         # [°]
         self.dc.harmonic_values = harmonic                                             # Reference 1st harmonic
         self.dc.reference = "external front"                                    # Reference channel is in the front panel
 
@@ -25,8 +25,8 @@ class DC:
 
     def auto_functions(self):
         self.dc.auto_gain = 0                                                   # Auto AC Gain OFF
-        # self.dc.auto_phase()                                                  # Auto phase
-        # self.dc.auto_sensitivity()                                            # Auto sensitivity
+        self.dc.auto_phase()                                                    # Auto phase
+        # self.dc.auto_sensitivity()                                              # Auto sensitivity
 
     def trigger_buffer(self):
         self.dc.curve_buffer_triggered = 0                                      # Set data taking to trigger mode with one complete curve or set of curves
