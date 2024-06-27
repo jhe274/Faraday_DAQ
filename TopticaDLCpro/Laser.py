@@ -51,8 +51,9 @@ class Laser(object):
                     dlc.laser1.recorder.inputs.channel1.low_pass_filter.enabled.set(LPfilter)
                     dlc.laser1.recorder.inputs.channel1.low_pass_filter.cut_off_frequency.set(Ch1_CutOff)
                     dlc.laser1.recorder.inputs.channel2.low_pass_filter.cut_off_frequency.set(Ch2_CutOff)
-            except DeviceNotFoundError:
-                sys.stderr.write('TOPTICA DLC pro not found.')
+                    print('TOPTICA DLC pro successfully configured!')
+            except DeviceNotFoundError as e:
+                sys.stderr.write('TOPTICA DLC pro not found: {}\n'.format(e))
 
     def get_recorder_data(self, laser):
         """

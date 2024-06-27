@@ -49,7 +49,7 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 70.000000                                                             # [V]
+        self.ScanOffset = 71.000000                                                             # [V]
         self.ScanAmplitude = 0                                                                  # [V]
         self.StartVoltage = self.ScanOffset - 10                                                # [V]
         self.EndVoltage = self.ScanOffset + 10                                                  # [V]
@@ -69,6 +69,7 @@ class Main:
         Reference frequency = 10 Hz
         """
         # self.mod = Mod(6)                                                                       # GPIB address: 7
+        # self.lockin_mod = "mod lock-in amplifier"
         # self.harm_mod = 1                                                                       # Reference Haromnic: 1st
         # self.phase_mod = 144.37                                                                 # Reference Phase: [°]
         # self.gain_mod = 0                                                                       # AC Gain: 0dB
@@ -82,8 +83,9 @@ class Main:
         Reference frequency = 50,000 Hz
         """
         self.l1f = L1f(7)                                                                       # GPIB address: 7
+        self.lockin_1f = "1f lock-in amplifier"
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
-        self.phase_1f = 20.93                                                                   # Reference Phase: [°]
+        self.phase_1f = 21.18                                                                   # Reference Phase: [°]
         self.gain_1f = 10                                                                       # AC Gain: [dB]
         self.sens_1f = 2E-3                                                                     # Sensitivity: [V]
         self.TC_1f = 100E-3                                                                     # Time Constant: [s]
@@ -95,10 +97,11 @@ class Main:
         Reference frequency = 50,000 Hz
         """
         self.l2f = L2f(8)                                                                       # GPIB address: 8
+        self.lockin_2f = "2f lock-in amplifier"
         self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
-        self.phase_2f = -43.22                                                                  # Reference Phase: [°]
+        self.phase_2f = 15.05                                                                   # Reference Phase: [°]
         self.gain_2f = 10                                                                       # AC Gain: [dB]
-        self.sens_2f = 500E-6                                                                   # Sensitivity: [V]
+        self.sens_2f = 2E-3                                                                     # Sensitivity: [V]
         self.TC_2f = 100E-3                                                                     # Time Constant: [s]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -108,9 +111,10 @@ class Main:
         Reference frequency = 977 Hz
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
+        self.lockin_dc = "dc lock-in amplifier"
         self.harm_dc = 1                                                                        # Reference Haromnic: 1st
-        self.phase_dc = 72.02                                                                   # Reference Phase: [°]
-        self.gain_dc = 0                                                                        # AC Gain: [dB]
+        self.phase_dc = 78.19                                                                   # Reference Phase: [°]
+        self.gain_dc = 0                                                                       # AC Gain: [dB]
         self.sens_dc = 500E-3                                                                   # Sensitivity: [V]
         self.TC_dc = 100E-3                                                                     # Time Constant: [s]
         self.len_dc = 16384                                                                     # Storage points
@@ -170,62 +174,82 @@ class Main:
         """
         try:
             self.b = Bristol871(self.port_Bristol)
+            print('Detector type =          ', self.b.detector('CW'))                           # Detector type = CW
+            print('Auto exposure =          ', self.b.auto_expo(self.auto_expo))
+            print('Calibration method =     ', self.b.calib_method(self.cali_meth))
+            self.b.calib_temp(self.delta_temp)                                                  # Temperature delta = 0.5°C
+            print('Trigger method =         ', self.b.trigger_method(self.trig_meth))
+            if self.trig_meth == 'INT':
+                print('Frame rate =             ', self.b.frame_rate(self.fram_rate), 'Hz\n')
+                # print('Average method =         ', self.b.average_state(self.aver_stat))
+                # print('Average data type =      ', self.b.average_data(self.aver_type))
+                # print('Average count =          ', self.b.average_count(self.aver_coun))
+            else:
+                print('Frame rate =             ', round(1/self.EXT_peri), 'Hz\n')
+            self.b.calib()                                                                      # Calibrate Bristol before the measurement
+            print('Bristol wavelength meter successfully configured!\n')
         except Exception as e:
-            print('Could not connect to Bristol871 wavelength meter: {}\n'.format(e))
+            print('Bristol871 wavelength meter not found: {}\n'.format(e))
             sys.exit(1)
-            
-        print('Detector type =          ', self.b.detector('CW'))                               # Detector type = CW
-        print('Auto exposure =          ', self.b.auto_expo(self.auto_expo))
-        print('Calibration method =     ', self.b.calib_method(self.cali_meth))
-        self.b.calib_temp(self.delta_temp)                                                      # Temperature delta = 0.5°C
-        print('Trigger method =         ', self.b.trigger_method(self.trig_meth))
-        if self.trig_meth == 'INT':
-            print('Frame rate =             ', self.b.frame_rate(self.fram_rate), 'Hz\n')
-            # print('Average method =         ', self.b.average_state(self.aver_stat))
-            # print('Average data type =      ', self.b.average_data(self.aver_type))
-            # print('Average count =          ', self.b.average_count(self.aver_coun))
-        else:
-            print('Frame rate =             ', round(1/self.EXT_peri), 'Hz\n')
-        self.b.calib()                                                              # Calibrate Bristol before the measurement
 
     def config_lock_ins(self):
         """
         Configure triple modulation lock-ins and set buffer to trigger mode
         """
-        # self.mod.reference_channel(self.phase_mod, self.harm_mod)
-        self.l1f.reference_channel(self.phase_1f, self.harm_1f)
-        self.l2f.reference_channel(self.phase_2f, self.harm_2f)
-        self.dc.reference_channel(self.phase_dc, self.harm_dc)
+        try:
+            # self.mod.reference_channel(self.phase_mod, self.harm_mod)
+            # self.mod.filters(self.gain_mod, self.TC_mod, self.sens_mod)
+            # self.mod.auto_functions()
+            # self.mod.trigger_buffer()
+            # print(f'{self.lockin_mod} successfully configured!')
 
-        # self.mod.filters(self.gain_mod, self.TC_mod, self.sens_mod)
-        self.l1f.filters(self.gain_1f, self.TC_1f, self.sens_1f)
-        self.l2f.filters(self.gain_2f, self.TC_2f, self.sens_2f)
-        self.dc.filters(self.gain_dc, self.TC_dc, self.sens_dc)
+            self.l1f.reference_channel(self.phase_1f, self.harm_1f)
+            self.l1f.filters(self.gain_1f, self.TC_1f, self.sens_1f)
+            # self.l1f.auto_functions()
+            self.l1f.trigger_buffer()
+            print(f'{self.lockin_1f} successfully configured!')
 
-        # self.mod.auto_functions()
-        # self.l1f.auto_functions()
-        # self.l2f.auto_functions()
-        # self.dc.auto_functions()
+            self.l2f.reference_channel(self.phase_2f, self.harm_2f)
+            self.l2f.filters(self.gain_2f, self.TC_2f, self.sens_2f)
+            # self.l2f.auto_functions()
+            self.l2f.trigger_buffer()
+            print(f'{self.lockin_2f} successfully configured!')
 
-        # self.mod.trigger_buffer()
-        self.l1f.trigger_buffer()
-        self.l2f.trigger_buffer()
-        self.dc.trigger_buffer()
+            self.dc.reference_channel(self.phase_dc, self.harm_dc)
+            self.dc.filters(self.gain_dc, self.TC_dc, self.sens_dc)
+            # self.dc.auto_functions()
+            self.dc.trigger_buffer()
+            print(f'{self.lockin_dc} successfully configured!\n')
+
+        except Exception as e:
+            print('SR7265 Lock-in amplifier not found: {}\n'.format(e))
+            sys.exit(1)
     
     def init_buffer(self):
         """
-        Initialize triple modulation lock-in buffers
-        """
-        # self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
-        self.l1f.init_curve_buffer(self.len_1f, self.STR_1f)
-        self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
-        self.dc.init_curve_buffer(self.len_dc, self.STR_dc)
-        
-        """
         Initialize Bristol wavelength meter buffer
         """
-        self.b.buffer('INIT')                                                                   # Initilize buffer
-        print('Bristol buffer initialized.\n')
+        try:
+            self.b.buffer('INIT')                                                                   # Initilize buffer
+            print('Bristol buffer initialized.\n')
+        except Exception as e:
+            print('Bristol871 wavelength meter buffer initialization failed: {}\n'.format(e))
+            sys.exit(1)
+        """
+        Initialize triple modulation lock-in buffers
+        """
+        try:
+            # self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
+            # print(f'{self.lockin_mod} buffer initialized.')
+            self.l1f.init_curve_buffer(self.len_1f, self.STR_1f)
+            print(f'{self.lockin_1f} buffer initialized.')
+            self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
+            print(f'{self.lockin_2f} buffer initialized.')
+            self.dc.init_curve_buffer(self.len_dc, self.STR_dc)
+            print(f'{self.lockin_dc} buffer initialized.\n')
+        except Exception as e:
+            print('SR7265 Lock-in amplifier buffer initialization failed: {}\n'.format(e))
+            sys.exit(1)
 
     def EXT_trig_mea(self):
         """
