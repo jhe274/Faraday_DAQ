@@ -85,9 +85,9 @@ class Main:
         self.l1f = L1f(7)                                                                       # GPIB address: 7
         self.lockin_1f = "1f lock-in amplifier"
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
-        self.phase_1f = 21.18                                                                   # Reference Phase: [°]
-        self.gain_1f = 10                                                                       # AC Gain: [dB]
-        self.sens_1f = 2E-3                                                                     # Sensitivity: [V]
+        self.phase_1f = 52.38                                                                   # Reference Phase: [°]
+        self.gain_1f = 0                                                                        # AC Gain: [dB]
+        self.sens_1f = 5E-3                                                                     # Sensitivity: [V]
         self.TC_1f = 100E-3                                                                     # Time Constant: [s]
         self.len_1f = 16384                                                                     # Storage points
         self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -99,9 +99,9 @@ class Main:
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.lockin_2f = "2f lock-in amplifier"
         self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
-        self.phase_2f = 15.05                                                                   # Reference Phase: [°]
-        self.gain_2f = 10                                                                       # AC Gain: [dB]
-        self.sens_2f = 2E-3                                                                     # Sensitivity: [V]
+        self.phase_2f = 16.25                                                                   # Reference Phase: [°]
+        self.gain_2f = 0                                                                        # AC Gain: [dB]
+        self.sens_2f = 10E-3                                                                     # Sensitivity: [V]
         self.TC_2f = 100E-3                                                                     # Time Constant: [s]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -113,9 +113,9 @@ class Main:
         self.dc = DC(9)                                                                         # GPIB address: 9
         self.lockin_dc = "dc lock-in amplifier"
         self.harm_dc = 1                                                                        # Reference Haromnic: 1st
-        self.phase_dc = 78.19                                                                   # Reference Phase: [°]
-        self.gain_dc = 0                                                                       # AC Gain: [dB]
-        self.sens_dc = 500E-3                                                                   # Sensitivity: [V]
+        self.phase_dc = 82.30                                                                   # Reference Phase: [°]
+        self.gain_dc = 0                                                                        # AC Gain: [dB]
+        self.sens_dc = 1                                                                        # Sensitivity: [V]
         self.TC_dc = 100E-3                                                                     # Time Constant: [s]
         self.len_dc = 16384                                                                     # Storage points
         self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -231,7 +231,7 @@ class Main:
         """
         try:
             self.b.buffer('INIT')                                                                   # Initilize buffer
-            print('Bristol buffer initialized.\n')
+            print('Bristol buffer initialized!\n')
         except Exception as e:
             print('Bristol871 wavelength meter buffer initialization failed: {}\n'.format(e))
             sys.exit(1)
@@ -242,11 +242,11 @@ class Main:
             # self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
             # print(f'{self.lockin_mod} buffer initialized.')
             self.l1f.init_curve_buffer(self.len_1f, self.STR_1f)
-            print(f'{self.lockin_1f} buffer initialized.')
+            print(f'{self.lockin_1f} buffer initialized!')
             self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
-            print(f'{self.lockin_2f} buffer initialized.')
+            print(f'{self.lockin_2f} buffer initialized!')
             self.dc.init_curve_buffer(self.len_dc, self.STR_dc)
-            print(f'{self.lockin_dc} buffer initialized.\n')
+            print(f'{self.lockin_dc} buffer initialized!\n')
         except Exception as e:
             print('SR7265 Lock-in amplifier buffer initialization failed: {}\n'.format(e))
             sys.exit(1)
@@ -367,7 +367,7 @@ class Main:
         """
         Retrieve data from lock-in buffers
         """
-        print('\nRetrieving data from Lock-ins buffer...')
+        print('\nRetrieving data from lock-in amplifiers buffer...')
         buffers = [self.l1f, self.l2f, self.dc]
         sensors = [self.sens_1f, self.sens_2f, self.sens_dc]
         
