@@ -48,12 +48,16 @@ class Main:
         """
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
-        self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC                                                 
-        self.ScanOffset = 71.000000                                                             # [V]
+        self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
+        # self.ScanOffset = 77.60000                                                              # [V]                                                 
+        self.ScanOffset = 77.600000                                                             # [V]
         self.ScanAmplitude = 0                                                                  # [V]
-        self.StartVoltage = self.ScanOffset - 10                                                # [V]
-        self.EndVoltage = self.ScanOffset + 10                                                  # [V]
-        self.ScanSpeed = 0.05                                                                   # [V/s]
+        # self.StartVoltage = self.ScanOffset - 10                                                # [V]
+        # self.EndVoltage = self.ScanOffset + 10                                                  # [V]
+        self.StartVoltage = self.ScanOffset - 2                                                 # [V]
+        self.EndVoltage = self.ScanOffset + 2                                                   # [V]
+        # self.ScanSpeed = 0.05                                                                   # [V/s]
+        self.ScanSpeed = 0.01                                                                   # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
         self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
@@ -85,9 +89,9 @@ class Main:
         self.l1f = L1f(7)                                                                       # GPIB address: 7
         self.lockin_1f = "1f lock-in amplifier"
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
-        self.phase_1f = 51.70                                                                   # Reference Phase: [°]
-        self.gain_1f = 0                                                                        # AC Gain: [dB]
-        self.sens_1f = 5E-3                                                                     # Sensitivity: [V]
+        self.phase_1f = 53.44                                                                   # Reference Phase: [°]
+        self.gain_1f = 10                                                                       # AC Gain: [dB]
+        self.sens_1f = 2E-3                                                                     # Sensitivity: [V]
         self.TC_1f = 100E-3                                                                     # Time Constant: [s]
         self.len_1f = 16384                                                                     # Storage points
         self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -99,9 +103,9 @@ class Main:
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.lockin_2f = "2f lock-in amplifier"
         self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
-        self.phase_2f = 16.61                                                                   # Reference Phase: [°]
-        self.gain_2f = 0                                                                        # AC Gain: [dB]
-        self.sens_2f = 10E-3                                                                     # Sensitivity: [V]
+        self.phase_2f = -169.35                                                                 # Reference Phase: [°]
+        self.gain_2f = 0                                                                       # AC Gain: [dB]
+        self.sens_2f = 1E-3                                                                   # Sensitivity: [V]
         self.TC_2f = 100E-3                                                                     # Time Constant: [s]
         self.len_2f = 16384                                                                     # Storage points
         self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
@@ -113,7 +117,7 @@ class Main:
         self.dc = DC(9)                                                                         # GPIB address: 9
         self.lockin_dc = "dc lock-in amplifier"
         self.harm_dc = 1                                                                        # Reference Haromnic: 1st
-        self.phase_dc = 77.78                                                                   # Reference Phase: [°]
+        self.phase_dc = 80.38                                                                   # Reference Phase: [°]
         self.gain_dc = 0                                                                        # AC Gain: [dB]
         self.sens_dc = 1                                                                        # Sensitivity: [V]
         self.TC_dc = 100E-3                                                                     # Time Constant: [s]
