@@ -49,13 +49,13 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
-        self.ScanOffset = 68.20000                                                              # [V]
+        self.ScanOffset = 67.50000                                                              # [V]
         self.ScanAmplitude = 0                                                                  # [V]
         self.StartVoltage = self.ScanOffset - 10                                                # [V]
         self.EndVoltage = self.ScanOffset + 10                                                  # [V]
         # self.StartVoltage = self.ScanOffset - 2                                                 # [V]
         # self.EndVoltage = self.ScanOffset + 2                                                   # [V]
-        self.ScanSpeed = 0.05                                                                   # [V/s]
+        self.ScanSpeed = 5                                                                   # [V/s]
         # self.ScanSpeed = 0.01                                                                   # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
         self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
@@ -69,14 +69,14 @@ class Main:
 
         """
         Mod lock-in amplifier, model DSP7265
-        Reference frequency = 10 Hz
+        Reference frequency = 0.1 Hz
         """
         self.mod = Mod(6)                                                                       # GPIB address: 6
         self.lockin_mod = "mod lock-in amplifier"
         self.harm_mod = 1                                                                       # Reference Haromnic: 1st
         self.phase_mod = 144.37                                                                 # Reference Phase: [°]
         self.gain_mod = 0                                                                       # AC Gain: [dB]
-        self.sens_mod = 1                                                                       # Sensitivity: [V]
+        self.sens_mod = 500e-3                                                                  # Sensitivity: [V]
         self.TC_mod = 100E-3                                                                    # Time Constant: [s]
         self.len_mod = 16384                                                                    # Storage points
         self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
@@ -291,7 +291,7 @@ class Main:
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.EXT_peri):4d}", 's', end='')
                     sleep(self.EXT_L)
                     print()
-                    # self.mod.halt_buffer()
+                    self.mod.halt_buffer()
                     self.l1f.halt_buffer()
                     self.l2f.halt_buffer()
                     self.dc.halt_buffer()
@@ -345,7 +345,7 @@ class Main:
                             pass
                         i = i + 1
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.INT_peri):4d}", 's', end='')
-                    # self.mod.halt_buffer()
+                    self.mod.halt_buffer()
                     self.l1f.halt_buffer()
                     self.l2f.halt_buffer()
                     self.dc.halt_buffer()
@@ -372,14 +372,14 @@ class Main:
         """
         print('\nRetrieving data from lock-in amplifiers buffer...')
         buffers = [self.mod, self.l1f, self.l2f, self.dc]
-        sensors = [self.sens_mod, self.sens_1f, self.sens_2f, self.sens_dc]
+        sensitivities = [self.sens_mod, self.sens_1f, self.sens_2f, self.sens_dc]
         
         data = []
         buffer_status = []
         timestamps = []
 
-        for buffer, sensor in zip(buffers, sensors):
-            X, Y, status = buffer.get_curve_buffer(sensor)
+        for buffer, sens in zip(buffers, sensitivities):
+            X, Y, status = buffer.get_curve_buffer(sens)
             data.extend([X, Y])
             buffer_status.append(status)
 
