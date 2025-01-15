@@ -71,15 +71,15 @@ class Main:
         Mod lock-in amplifier, model DSP7265
         Reference frequency = 10 Hz
         """
-        # self.mod = Mod(6)                                                                       # GPIB address: 7
-        # self.lockin_mod = "mod lock-in amplifier"
-        # self.harm_mod = 1                                                                       # Reference Haromnic: 1st
-        # self.phase_mod = 144.37                                                                 # Reference Phase: [°]
-        # self.gain_mod = 0                                                                       # AC Gain: 0dB
-        # self.sens_mod = 1                                                                       # Sensitivity: [V]
-        # self.TC_mod = 100E-3                                                                    # Time Constant: [s]
-        # self.len_mod = 16384                                                                    # Storage points
-        # self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
+        self.mod = Mod(6)                                                                       # GPIB address: 6
+        self.lockin_mod = "mod lock-in amplifier"
+        self.harm_mod = 1                                                                       # Reference Haromnic: 1st
+        self.phase_mod = 144.37                                                                 # Reference Phase: [°]
+        self.gain_mod = 0                                                                       # AC Gain: [dB]
+        self.sens_mod = 1                                                                       # Sensitivity: [V]
+        self.TC_mod = 100E-3                                                                    # Time Constant: [s]
+        self.len_mod = 16384                                                                    # Storage points
+        self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
 
         """
         1f lock-in amplifier, model DSP7265
@@ -200,11 +200,11 @@ class Main:
         Configure triple modulation lock-ins and set buffer to trigger mode
         """
         try:
-            # self.mod.reference_channel(self.phase_mod, self.harm_mod)
-            # self.mod.filters(self.gain_mod, self.TC_mod, self.sens_mod)
+            self.mod.reference_channel(self.phase_mod, self.harm_mod)
+            self.mod.filters(self.gain_mod, self.TC_mod, self.sens_mod)
             # self.mod.auto_functions()
-            # self.mod.trigger_buffer()
-            # print(f'{self.lockin_mod} successfully configured!')
+            self.mod.trigger_buffer()
+            print(f'{self.lockin_mod} successfully configured!')
 
             self.l1f.reference_channel(self.phase_1f, self.harm_1f)
             self.l1f.filters(self.gain_1f, self.TC_1f, self.sens_1f)
@@ -242,8 +242,8 @@ class Main:
         Initialize triple modulation lock-in buffers
         """
         try:
-            # self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
-            # print(f'{self.lockin_mod} buffer initialized.')
+            self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
+            print(f'{self.lockin_mod} buffer initialized!')
             self.l1f.init_curve_buffer(self.len_1f, self.STR_1f)
             print(f'{self.lockin_1f} buffer initialized!')
             self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
@@ -371,8 +371,8 @@ class Main:
         Retrieve data from lock-in buffers
         """
         print('\nRetrieving data from lock-in amplifiers buffer...')
-        buffers = [self.l1f, self.l2f, self.dc]
-        sensors = [self.sens_1f, self.sens_2f, self.sens_dc]
+        buffers = [self.mod, self.l1f, self.l2f, self.dc]
+        sensors = [self.sens_mod, self.sens_1f, self.sens_2f, self.sens_dc]
         
         data = []
         buffer_status = []
@@ -406,13 +406,13 @@ class Main:
             file_path = os.path.join(folder_path, filename)
 
             with open(file_path, "w") as log:
-                for attribute, value in zip(['TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]'],
-                                            [self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc]):
+                for attribute, value in zip(['TC_mod[s]', 'SENS_mod[V]', 'TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]'],
+                                            [self.TC_mod, self.sens_mod, self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc]):
                     log.write(f'#{attribute} {value}\n')
 
                 log.write('#Field Input Voltage\n')
                 log.write('#Preamp gain\n')
-                header = 'Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc\n'
+                header = 'Timestamp,X_mod,Y_mod,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc\n'
                 log.write(header)
 
                 for row in zip(*data):
@@ -432,8 +432,14 @@ if __name__ == "__main__":
     m.config_Bristol()
     m.config_lock_ins()
     m.init_buffer()
-    if (m.WideScanDuration / m.STR_1f > m.len_1f) or (m.WideScanDuration / m.STR_2f > m.len_2f) or (m.WideScanDuration / m.STR_dc > m.len_dc):
-        print('Number of data points exceeds lock-ins buffer length.')
+    if (m.WideScanDuration / m.STR_mod > m.len_mod) or (m.WideScanDuration / m.STR_1f > m.len_1f) or (m.WideScanDuration / m.STR_2f > m.len_2f) or (m.WideScanDuration / m.STR_dc > m.len_dc):
+        print('Number of data points exceeds Mod lock-ins buffer length.')
+    elif m.WideScanDuration / m.STR_1f > m.len_1f:
+        print('Number of data points exceeds 1f lock-ins buffer length.')
+    elif m.WideScanDuration / m.STR_2f > m.len_2f:
+        print('Number of data points exceeds 2f lock-ins buffer length.')
+    elif m.WideScanDuration / m.STR_dc > m.len_dc:
+        print('Number of data points exceeds DC lock-ins buffer length.')
         pass
     else:
         trig_mode = m.b.trigger_method(m.trig_meth)
