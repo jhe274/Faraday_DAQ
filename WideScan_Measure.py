@@ -97,7 +97,7 @@ class Main:
 
         """
         2f lock-in amplifier, model DSP7265
-        Reference frequency = 50,000 Hz
+        Reference frequency = 50 kHz
         """
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.lockin_2f = "2f lock-in amplifier"
@@ -111,7 +111,7 @@ class Main:
 
         """
         DC lock-in amplifier, model DSP7265
-        Reference frequency = 977 Hz
+        Reference frequency = 1-2 kHz
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
         self.lockin_dc = "dc lock-in amplifier"
@@ -323,6 +323,7 @@ class Main:
             # Logic TTL at the selected DIO channel gates
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line1")                      # DIO1: Gate16, lock-ins
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line2")                      # DIO2: Gate17, Toptica DLC pro
+            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line3")
             task.start()
             i = 0
             timestamps = []
@@ -432,7 +433,7 @@ if __name__ == "__main__":
     m.config_Bristol()
     m.config_lock_ins()
     m.init_buffer()
-    if (m.WideScanDuration / m.STR_mod > m.len_mod) or (m.WideScanDuration / m.STR_1f > m.len_1f) or (m.WideScanDuration / m.STR_2f > m.len_2f) or (m.WideScanDuration / m.STR_dc > m.len_dc):
+    if (m.WideScanDuration / m.STR_mod > m.len_mod):
         print('Number of data points exceeds Mod lock-ins buffer length.')
     elif m.WideScanDuration / m.STR_1f > m.len_1f:
         print('Number of data points exceeds 1f lock-ins buffer length.')
