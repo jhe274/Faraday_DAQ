@@ -222,7 +222,7 @@ class Main:
             print('SR7265 Lock-in amplifier buffer initialization failed: {}\n'.format(e))
             sys.exit(1)
 
-    def EXT_trig_mea(self):
+    def EXT_trig_measure(self):
         """
         External trgiger mrthod for Bristol wavelength meter during FR measurements
         """
@@ -255,7 +255,7 @@ class Main:
                 print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.EXT_peri):4d}", 's', end='')
             sleep(self.EXT_L)
             print()
-            # self.mod.halt_buffer()
+            self.mod.halt_buffer()
             self.l1f.halt_buffer()
             self.l2f.halt_buffer()
             self.dc.halt_buffer()
@@ -273,7 +273,7 @@ class Main:
 
         return start_time, elap_time, timestamps
     
-    def INT_trig_mea(self):
+    def INT_trig_measure(self):
         """
         Internal trgiger mrthod for Bristol wavelength meter during FR measurements
         """
@@ -382,20 +382,20 @@ if __name__ == "__main__":
     m.config_Bristol()
     m.config_lock_ins()
     m.init_buffer()
-    if (m.WideScanDuration / m.STR_mod > m.len_mod):
+    if (m.MeasureDuration / m.STR_mod > m.len_mod):
         print('Number of data points exceeds Mod lock-ins buffer length.')
-    elif m.WideScanDuration / m.STR_1f > m.len_1f:
+    elif m.MeasureDuration / m.STR_1f > m.len_1f:
         print('Number of data points exceeds 1f lock-ins buffer length.')
-    elif m.WideScanDuration / m.STR_2f > m.len_2f:
+    elif m.MeasureDuration / m.STR_2f > m.len_2f:
         print('Number of data points exceeds 2f lock-ins buffer length.')
-    elif m.WideScanDuration / m.STR_dc > m.len_dc:
+    elif m.MeasureDuration / m.STR_dc > m.len_dc:
         print('Number of data points exceeds DC lock-ins buffer length.')
         pass
     else:
         trig_mode = m.b.trigger_method(m.trig_meth)
         if trig_mode == 'INT':
-            start_time, elap_time, timestamps = m.INT_trig_mea()
+            start_time, elap_time, timestamps = m.INT_trig_measure()
         elif trig_mode == 'RISE' or trig_mode == 'FALL':
-            start_time, elap_time, timestamps = m.EXT_trig_mea()
+            start_time, elap_time, timestamps = m.EXT_trig_measure()
         m.b.get_buffer(bristol_path, bristol_file, elap_time, timestamps)
         m.get_lock_in_buffer(lockin_path, lockin_file, start_time)
