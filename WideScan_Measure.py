@@ -8,6 +8,7 @@ from Bristol871.Bristol_871A import Bristol871
 from DSP7265.Lock_in_1f import L1f
 from DSP7265.Lock_in_2f import L2f
 from DSP7265.Lock_in_DC import DC
+from DSP7265.Lock_in_Mod import Mod
 from instruments.lakeshore import Lakeshore475
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 import numpy as np
@@ -65,6 +66,20 @@ class Main:
         self.LPfilter = True                                                                    # True -> Enable, False -> Disable
         self.Ch1_CutOff = 0.7 * self.fram_rate / 2
         self.Ch2_CutOff = 4300
+
+        """
+        Mod lock-in amplifier, model DSP7265
+        Reference frequency = 0.1 Hz
+        """
+        self.mod = Mod(6)                                                                       # GPIB address: 6
+        self.lockin_mod = "mod lock-in amplifier"
+        self.harm_mod = 1                                                                       # Reference Haromnic: 1st
+        self.phase_mod = 144.37                                                                 # Reference Phase: [°]
+        self.gain_mod = 0                                                                       # AC Gain: [dB]
+        self.sens_mod = 500e-3                                                                  # Sensitivity: [V]
+        self.TC_mod = 100E-3                                                                    # Time Constant: [s]
+        self.len_mod = 16384                                                                    # Storage points
+        self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
 
         """
         1f lock-in amplifier, model DSP7265
@@ -185,6 +200,12 @@ class Main:
         Configure triple modulation lock-ins and set buffer to trigger mode
         """
         try:
+            self.mod.reference_channel(self.phase_mod, self.harm_mod)
+            self.mod.filters(self.gain_mod, self.TC_mod, self.sens_mod)
+            # self.mod.auto_functions()
+            self.mod.trigger_buffer()
+            print(f'{self.lockin_mod} successfully configured!')
+
             self.l1f.reference_channel(self.phase_1f, self.harm_1f)
             self.l1f.filters(self.gain_1f, self.TC_1f, self.sens_1f)
             # self.l1f.auto_functions()
@@ -221,6 +242,8 @@ class Main:
         Initialize triple modulation lock-in buffers
         """
         try:
+            self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
+            print(f'{self.lockin_mod} buffer initialized!')
             self.l1f.init_curve_buffer(self.len_1f, self.STR_1f)
             print(f'{self.lockin_1f} buffer initialized!')
             self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
@@ -268,6 +291,7 @@ class Main:
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.EXT_peri):4d}", 's', end='')
                     sleep(self.EXT_L)
                     print()
+                    self.mod.halt_buffer()
                     self.l1f.halt_buffer()
                     self.l2f.halt_buffer()
                     self.dc.halt_buffer()
@@ -321,6 +345,7 @@ class Main:
                             pass
                         i = i + 1
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.INT_peri):4d}", 's', end='')
+                    self.mod.halt_buffer()
                     self.l1f.halt_buffer()
                     self.l2f.halt_buffer()
                     self.dc.halt_buffer()
@@ -346,8 +371,8 @@ class Main:
         Retrieve data from lock-in buffers
         """
         print('\nRetrieving data from lock-in amplifiers buffer...')
-        buffers = [self.l1f, self.l2f, self.dc]
-        sensitivities = [self.sens_1f, self.sens_2f, self.sens_dc]
+        buffers = [self.l1f, self.l2f, self.dc, self.mod]
+        sensitivities = [self.sens_1f, self.sens_2f, self.sens_dc, self.sens_mod]
         
         data = []
         buffer_status = []
@@ -381,13 +406,13 @@ class Main:
             file_path = os.path.join(folder_path, filename)
 
             with open(file_path, "w") as log:
-                for attribute, value in zip(['TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]'],
-                                            [self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc]):
+                for attribute, value in zip(['TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]', 'TC_mod[s]', 'SENS_mod[V]'],
+                                            [self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc, self.TC_mod, self.sens_mod]):
                     log.write(f'#{attribute} {value}\n')
 
                 log.write('#Field Input Voltage\n')
                 log.write('#Preamp gain\n')
-                header = 'Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc\n'
+                header = 'Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc,X_mod,Y_mod,\n'
                 log.write(header)
 
                 for row in zip(*data):
@@ -407,7 +432,9 @@ if __name__ == "__main__":
     m.config_Bristol()
     m.config_lock_ins()
     m.init_buffer()
-    if m.WideScanDuration / m.STR_1f > m.len_1f:
+    if (m.WideScanDuration / m.STR_mod > m.len_mod):
+        print('Number of data points exceeds Mod lock-ins buffer length.')
+    elif m.WideScanDuration / m.STR_1f > m.len_1f:
         print('Number of data points exceeds 1f lock-ins buffer length.')
     elif m.WideScanDuration / m.STR_2f > m.len_2f:
         print('Number of data points exceeds 2f lock-ins buffer length.')
@@ -419,6 +446,6 @@ if __name__ == "__main__":
         if trig_mode == 'INT':
             start_time, elap_time, timestamps = m.INT_trig_measure()
         elif trig_mode == 'RISE' or trig_mode == 'FALL':
-            start_time, elap_time, timestamps = m.EXT_trig_measure  ()
+            start_time, elap_time, timestamps = m.EXT_trig_measure()
         m.b.get_buffer(bristol_path, bristol_file, elap_time, timestamps)
         m.get_lock_in_buffer(lockin_path, lockin_file, start_time)
