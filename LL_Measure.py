@@ -224,7 +224,7 @@ class Main:
 
     def EXT_trig_measure(self):
         """
-        External trgiger mrthod for Bristol wavelength meter during FR measurements
+        External trgiger mrthod for Bristol wavelength meter during measurements
         """
         print('Bristol wavelength meter is operating at EXTERNAL trigger mode...')
         with nidaqmx.Task() as task:
@@ -275,7 +275,7 @@ class Main:
     
     def INT_trig_measure(self):
         """
-        Internal trgiger mrthod for Bristol wavelength meter during FR measurements
+        Internal trgiger mrthod for Bristol wavelength meter during measurements
         """
         print('Bristol wavelength meter is operating at INTERNAL trigger mode...')
         with nidaqmx.Task() as task:
