@@ -29,7 +29,7 @@ class Main:
         self.system = nidaqmx.system.System.local()
         self.device = nidaqmx.system.Device(f'{self.NI_channel}')
         self.system.driver_version
-        
+
         """
         Bristol 871A-VIS
         """
@@ -48,14 +48,14 @@ class Main:
         Reference frequency = 0.1 Hz
         """
         self.mod = Mod(6)                                                                       # GPIB address: 6
-        self.lockin_mod = "mod lock-in amplifier"
+        self.lockin_mod = "Mod lock-in amplifier"
         self.harm_mod = 1                                                                       # Reference Haromnic: 1st
         self.phase_mod = 144.37                                                                 # Reference Phase: [°]
         self.gain_mod = 0                                                                       # AC Gain: 0dB
-        self.sens_mod = 500E-3                                                                  # Sensitivity: [V]
-        self.TC_mod = 100E-3                                                                    # Time Constant: [s]
+        self.sens_mod = 1                                                                       # Sensitivity: [V]
+        self.TC_mod = 1                                                                         # Time Constant: [s]
         self.len_mod = 16384                                                                    # Storage points
-        self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
+        self.STR_mod = 1                                                                        # Curve buffer Storage Interval: [s/point]
 
         """
         1f lock-in amplifier, model DSP7265
@@ -64,12 +64,12 @@ class Main:
         self.l1f = L1f(7)                                                                       # GPIB address: 7
         self.lockin_1f = "1f lock-in amplifier"
         self.harm_1f = 1                                                                        # Reference Haromnic: 1st
-        self.phase_1f = 75.94                                                                   # Reference Phase: [°]
-        self.gain_1f = 10                                                                       # AC Gain: [dB]
-        self.sens_1f = 1E-3                                                                     # Sensitivity: [V]
-        self.TC_1f = 50E-3                                                                      # Time Constant: [s]
+        self.phase_1f = 10.92                                                                   # Reference Phase: [°]
+        self.gain_1f = 0                                                                        # AC Gain: [dB]
+        self.sens_1f = 2E-3                                                                     # Sensitivity: [V]
+        self.TC_1f = 1                                                                          # Time Constant: [s]
         self.len_1f = 16384                                                                     # Storage points
-        self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
+        self.STR_1f = 1                                                                         # Curve buffer Storage Interval: [s/point]
 
         """
         2f lock-in amplifier, model DSP7265
@@ -78,46 +78,65 @@ class Main:
         self.l2f = L2f(8)                                                                       # GPIB address: 8
         self.lockin_2f = "2f lock-in amplifier"
         self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
-        self.phase_2f = 131.58                                                                  # Reference Phase: [°]
+        self.phase_2f = -164.76                                                                  # Reference Phase: [°]
         self.gain_2f = 10                                                                       # AC Gain: [dB]
         self.sens_2f = 200E-3                                                                   # Sensitivity: [V]
         self.TC_2f = 50E-3                                                                      # Time Constant: [s]
         self.len_2f = 16384                                                                     # Storage points
-        self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
+        self.STR_2f = 1                                                                         # Curve buffer Storage Interval: [s/point]
 
         """
         DC lock-in amplifier, model DSP7265
         Reference frequency = 1-2 kHz
         """
         self.dc = DC(9)                                                                         # GPIB address: 9
-        self.lockin_dc = "dc lock-in amplifier"
+        self.lockin_dc = "DC lock-in amplifier"
         self.harm_dc = 1                                                                        # Reference Haromnic: 1st
-        self.phase_dc = 65.37                                                                   # Reference Phase: [°]
-        self.gain_dc = 10                                                                       # AC Gain: [dB]
-        self.sens_dc = 200e-3                                                                   # Sensitivity: [V]
-        self.TC_dc = 50E-3                                                                      # Time Constant: [s]
+        self.phase_dc = -18.38                                                                  # Reference Phase: [°]
+        self.gain_dc = 0                                                                        # AC Gain: [dB]
+        self.sens_dc = 500e-3                                                                   # Sensitivity: [V]
+        self.TC_dc = 1                                                                          # Time Constant: [s]
         self.len_dc = 16384                                                                     # Storage points
-        self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
+        self.STR_dc = 1                                                                         # Curve buffer Storage Interval: [s/point]
+        
+        """
+        Wavetek 50 MHz Function generator, model 80
+        """
+        self.B0_sweep_frequency = 500e-3                                                        # [Hz]
+        self.B0_sweep_period = 1 / self.B0_sweep_frequency                                      # [s]
+        self.B0_sweep_NPeriods = 60
+        self.B0_sweep_times = [(i*self.B0_sweep_period) for i in range(self.B0_sweep_NPeriods)] # Measurement time array while using INTERNAL trigger
 
         """
-        Measurement settings
+        Measurement settings with Helmholtz coil modulation
+        """
+        self.MeasureDuration = self.B0_sweep_NPeriods * self.B0_sweep_period          # [s]
+
+        """
+        Measurement settings using EXTERNAL trigger method for Bristol Wavelength meter
         The computer clock determines the timestamps for EXT trigger method
         the pulse period should not be shorter than 5ms
         """
+        # self.MeasureDuration = 400                                                              # [s]
         self.EXT_H = 0.005                                                                      # 5ms pulse
         self.EXT_L = 0.005                                                                      # send every 5ms
-        self.MeasureDuration = 10                                                               # [s]
         self.INT_peri = 1 / self.fram_rate                                                      # Bristol measurement period while using EXTERNAL trigger
         self.EXT_peri = self.EXT_H + self.EXT_L                                                 # Bristol measurement period while using EXTERNAL trigger
         self.INT_NPeri = int(self.MeasureDuration / self.INT_peri)                              # Number of periods while using INTERNAL trigger
         self.EXT_NPeri = int(self.MeasureDuration / self.EXT_peri)                              # Number of periods while using EXTERNAL trigger
         self.INT_times = [ (i*self.INT_peri) for i in range(self.INT_NPeri) ]                   # Measurement time array while using INTERNAL trigger
         self.EXT_times = [ (i*self.EXT_peri) for i in range(self.EXT_NPeri) ]                   # Measurement time array while using EXTERNAL trigger
-        self.Double_rise = [True, True]
-        self.Double_fall = [False, False]
-        self.Triple_rise = [True, True, True]
+
+        """
+        TTL logic gate
+        """
+        self.field_rise = [False, True]
+        self.field_fall = [True, False]
+        self.double_rise = [True, True]
+        self.double_fall = [False, False]
+        self.triple_rise = [True, True, True]
         self.EXT_fall = [False, True, True]
-        self.Triple_fall = [False, False, False]
+        self.triple_fall = [False, False, False]
 
     def config_NIcDAQ(self):
         """
@@ -245,7 +264,7 @@ class Main:
                 while perf_counter() - t0 < self.EXT_times[i]:
                     pass
                 timestamps_before_rise.append(time())
-                task.write(self.Triple_rise)
+                task.write(self.triple_rise)
                 timestamps_after_rise.append(time())
                 t1 = perf_counter()
                 while perf_counter() - t1 < (self.EXT_H):
@@ -290,24 +309,26 @@ class Main:
             print("\n=============== Measurement Initiated ===============")
             self.b.buffer('OPEN')
             start_time = time()
-            task.write(self.Double_rise)
-            while i < self.INT_NPeri:
+            task.write(self.double_rise)
+            while i < self.B0_sweep_NPeriods:
                 if i == 0:
                     t0 = perf_counter()
-                while perf_counter() - t0 < self.INT_times[i]:
+                while perf_counter() - t0 < self.B0_sweep_times[i]:
                     pass
+                task.write(self.double_rise)
                 t1 = perf_counter()
-                while perf_counter() - t1 < (self.INT_peri/2):
+                while perf_counter() - t1 < (self.B0_sweep_period/2):
                     pass
+                task.write(self.field_fall)
                 i = i + 1
-                print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.INT_peri):4d}", 's', end='')
+                print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.B0_sweep_period):4d}", 's', end='')
             # self.mod.halt_buffer()
             self.l1f.halt_buffer()
             self.l2f.halt_buffer()
             self.dc.halt_buffer()
             self.b.buffer('CLOS')
             elap_time = perf_counter() - t0
-            task.write(self.Double_fall)
+            task.write(self.double_fall)
             print("=============== Measurement Completed ===============")
             task.stop()
             timestamp = [start_time + INT_time for INT_time in self.INT_times]
