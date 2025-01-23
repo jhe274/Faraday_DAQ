@@ -113,11 +113,11 @@ class Main:
         self.EXT_NPeri = int(self.MeasureDuration / self.EXT_peri)                              # Number of periods while using EXTERNAL trigger
         self.INT_times = [ (i*self.INT_peri) for i in range(self.INT_NPeri) ]                   # Measurement time array while using INTERNAL trigger
         self.EXT_times = [ (i*self.EXT_peri) for i in range(self.EXT_NPeri) ]                   # Measurement time array while using EXTERNAL trigger
-        self.INT_rise = [True, True]
-        self.INT_fall = [False, False]
-        self.EXT_rise = [True, True, True]
+        self.Double_rise = [True, True]
+        self.Double_fall = [False, False]
+        self.Triple_rise = [True, True, True]
         self.EXT_fall = [False, True, True]
-        self.All_fall = [False, False, False]
+        self.Triple_fall = [False, False, False]
 
     def config_NIcDAQ(self):
         """
@@ -245,7 +245,7 @@ class Main:
                 while perf_counter() - t0 < self.EXT_times[i]:
                     pass
                 timestamps_before_rise.append(time())
-                task.write(self.EXT_rise)
+                task.write(self.Triple_rise)
                 timestamps_after_rise.append(time())
                 t1 = perf_counter()
                 while perf_counter() - t1 < (self.EXT_H):
@@ -261,7 +261,7 @@ class Main:
             self.dc.halt_buffer()
             self.b.buffer('CLOS')
             elap_time = perf_counter() - t0
-            task.write(self.All_fall)
+            task.write(self.Triple_fall)
             print("=============== Measurement Completed ===============")
             print(f'{self.EXT_NPeri} periods of {self.EXT_peri} seconds')
             task.stop()
@@ -281,16 +281,16 @@ class Main:
         with nidaqmx.Task() as task:
             # Logic TTL at the selected DIO channel gates
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line1")                      # DIO1: Gate16, lock-ins
-            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line3")
+            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line3")                      # DIO3: Gate19, function generator
             task.start()
             i = 0
             timestamps = []
             print(f'Measurement duration =   {int(self.MeasureDuration):4d}', 's')
-            # self.countdown(5)
+            self.countdown(5)
             print("\n=============== Measurement Initiated ===============")
             self.b.buffer('OPEN')
             start_time = time()
-            task.write(self.INT_rise)
+            task.write(self.Double_rise)
             while i < self.INT_NPeri:
                 if i == 0:
                     t0 = perf_counter()
@@ -307,7 +307,7 @@ class Main:
             self.dc.halt_buffer()
             self.b.buffer('CLOS')
             elap_time = perf_counter() - t0
-            task.write(self.INT_fall)
+            task.write(self.Double_fall)
             print("=============== Measurement Completed ===============")
             task.stop()
             timestamp = [start_time + INT_time for INT_time in self.INT_times]
@@ -322,14 +322,14 @@ class Main:
         Retrieve data from lock-in buffers
         """
         print('\nRetrieving data from Lock-ins buffer...')
-        buffers = [self.mod, self.l1f, self.l2f, self.dc]
-        sensors = [self.sens_mod, self.sens_1f, self.sens_2f, self.sens_dc]
+        buffers = [self.l1f, self.l2f, self.dc, self.mod]
+        sensitivities = [self.sens_1f, self.sens_2f, self.sens_dc, self.sens_mod]
         
         data = []
         buffer_status = []
         timestamps = []
 
-        for buffer, sens in zip(buffers, sensors):
+        for buffer, sens in zip(buffers, sensitivities):
             X, Y, status = buffer.get_curve_buffer(sens)
             data.extend([X, Y])
             buffer_status.append(status)
@@ -357,13 +357,13 @@ class Main:
             file_path = os.path.join(folder_path, filename)
 
             with open(file_path, "w") as log:
-                for attribute, value in zip(['TC_mod[s]', 'SENS_mod[V]', 'TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]'],
-                                            [self.TC_mod, self.sens_mod, self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc]):
+                for attribute, value in zip(['TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]', 'TC_mod[s]', 'SENS_mod[V]'],
+                                            [self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc, self.TC_mod, self.sens_mod]):
                     log.write(f'#{attribute} {value}\n')
 
                 log.write('#Field Input Voltage\n')
                 log.write('#Preamp gain\n')
-                header = 'Timestamp,X_mod,Y_mod,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc\n'
+                header = 'Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc,X_mod,Y_mod\n'
                 log.write(header)
 
                 for row in zip(*data):

@@ -323,7 +323,6 @@ class Main:
             # Logic TTL at the selected DIO channel gates
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line1")                      # DIO1: Gate16, lock-ins
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line2")                      # DIO2: Gate17, Toptica DLC pro
-            task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line3")
             task.start()
             i = 0
             timestamps = []
@@ -372,8 +371,8 @@ class Main:
         Retrieve data from lock-in buffers
         """
         print('\nRetrieving data from lock-in amplifiers buffer...')
-        buffers = [self.mod, self.l1f, self.l2f, self.dc]
-        sensitivities = [self.sens_mod, self.sens_1f, self.sens_2f, self.sens_dc]
+        buffers = [self.l1f, self.l2f, self.dc, self.mod]
+        sensitivities = [self.sens_1f, self.sens_2f, self.sens_dc, self.sens_mod]
         
         data = []
         buffer_status = []
@@ -407,13 +406,13 @@ class Main:
             file_path = os.path.join(folder_path, filename)
 
             with open(file_path, "w") as log:
-                for attribute, value in zip(['TC_mod[s]', 'SENS_mod[V]', 'TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]'],
-                                            [self.TC_mod, self.sens_mod, self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc]):
+                for attribute, value in zip(['TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]', 'TC_mod[s]', 'SENS_mod[V]'],
+                                            [self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc, self.TC_mod, self.sens_mod]):
                     log.write(f'#{attribute} {value}\n')
 
                 log.write('#Field Input Voltage\n')
                 log.write('#Preamp gain\n')
-                header = 'Timestamp,X_mod,Y_mod,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc\n'
+                header = 'Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc,X_mod,Y_mod,\n'
                 log.write(header)
 
                 for row in zip(*data):
