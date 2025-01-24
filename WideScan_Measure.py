@@ -136,11 +136,11 @@ class Main:
         self.EXT_NPeri = int(self.WideScanDuration / self.EXT_peri)                             # Number of periods while using EXTERNAL trigger
         self.INT_times = [ (i*self.INT_peri) for i in range(self.INT_NPeri) ]                   # Measurement time array while using INTERNAL trigger
         self.EXT_times = [ (i*self.EXT_peri) for i in range(self.EXT_NPeri) ]                   # Measurement time array while using EXTERNAL trigger
-        self.INT_rise = [True, True]
-        self.INT_fall = [False, False]
-        self.EXT_rise = [True, True, True]
+        self.double_rise = [True, True]
+        self.double_fall = [False, False]
+        self.triple_rise = [True, True, True]
         self.EXT_fall = [False, True, True]
-        self.All_fall = [False, False, False]
+        self.triple_fall = [False, False, False]
 
     def config_NIcDAQ(self):
         """
@@ -281,7 +281,7 @@ class Main:
                         while perf_counter() - t0 < self.EXT_times[i]:
                             pass
                         timestamps_before_rise.append(time())
-                        task.write(self.EXT_rise)
+                        task.write(self.triple_rise)
                         timestamps_after_rise.append(time())
                         t1 = perf_counter()
                         while perf_counter() - t1 < (self.EXT_H):
@@ -290,14 +290,13 @@ class Main:
                         i = i + 1
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.EXT_peri):4d}", 's', end='')
                     sleep(self.EXT_L)
-                    print()
                     self.mod.halt_buffer()
                     self.l1f.halt_buffer()
                     self.l2f.halt_buffer()
                     self.dc.halt_buffer()
                     self.b.buffer('CLOS')
                     elap_time = perf_counter() - t0
-                    task.write(self.All_fall)
+                    task.write(self.triple_fall)
                     print("=============== Wide Scan Completed ===============")
                     dlcpro.laser1.wide_scan.stop()
                     result = self.laser.get_recorder_data(dlcpro.laser1)
@@ -334,7 +333,7 @@ class Main:
                     print("\n=============== Wide Scan Initiated ===============")
                     self.b.buffer('OPEN')
                     start_time = time()
-                    task.write(self.INT_rise)
+                    task.write(self.double_rise)
                     while i < self.INT_NPeri:
                         if i == 0:
                             t0 = perf_counter()
@@ -351,7 +350,7 @@ class Main:
                     self.dc.halt_buffer()
                     self.b.buffer('CLOS')
                     elap_time = perf_counter() - t0
-                    task.write(self.INT_fall)
+                    task.write(self.double_fall)
                     print("\n=============== Wide Scan Completed ===============")
                     dlcpro.laser1.wide_scan.stop()
                     # result = self.laser.get_recorder_data(dlcpro.laser1)
