@@ -102,15 +102,14 @@ class Main:
         """
         Wavetek 50 MHz Function generator, model 80
         """
-        self.B0_sweep_frequency = 500e-3                                                        # [Hz]
-        self.B0_sweep_period = 1 / self.B0_sweep_frequency                                      # [s]
-        self.B0_sweep_NPeriods = 60
+        self.B0_sweep_period = 1 / (500e-3)                                                     # [s]
+        self.B0_sweep_NPeriods = 2
         self.B0_sweep_times = [(i*self.B0_sweep_period) for i in range(self.B0_sweep_NPeriods)] # Measurement time array while using INTERNAL trigger
-
+        
         """
-        Measurement settings with Helmholtz coil modulation
+        Measurement time with Helmholtz coil modulation
         """
-        self.MeasureDuration = self.B0_sweep_NPeriods * self.B0_sweep_period          # [s]
+        self.MeasureDuration = self.B0_sweep_NPeriods * self.B0_sweep_period                    # [s]
 
         """
         Measurement settings using EXTERNAL trigger method for Bristol Wavelength meter
@@ -128,7 +127,7 @@ class Main:
         self.EXT_times = [ (i*self.EXT_peri) for i in range(self.EXT_NPeri) ]                   # Measurement time array while using EXTERNAL trigger
 
         """
-        TTL logic gate
+        TTL logic gate controls
         """
         self.field_rise = [False, True]
         self.field_fall = [True, False]
@@ -316,13 +315,18 @@ class Main:
                 while perf_counter() - t0 < self.B0_sweep_times[i]:
                     pass
                 task.write(self.double_rise)
+                print("I rised!")
                 t1 = perf_counter()
                 while perf_counter() - t1 < (self.B0_sweep_period/2):
                     pass
+
                 task.write(self.field_fall)
+                print("I fell!")
                 i = i + 1
                 print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.B0_sweep_period):4d}", 's', end='')
-            # self.mod.halt_buffer()
+
+            sleep(self.B0_sweep_period / 2)                                                     # Wait until the end of the last half period          
+            self.mod.halt_buffer()
             self.l1f.halt_buffer()
             self.l2f.halt_buffer()
             self.dc.halt_buffer()
@@ -330,7 +334,6 @@ class Main:
             elap_time = perf_counter() - t0
             task.write(self.double_fall)
             print("=============== Measurement Completed ===============")
-            task.stop()
             timestamp = [start_time + INT_time for INT_time in self.INT_times]
             for j in range(self.INT_NPeri):
                 formatted_timestamp = strftime("%Y-%m-%dT%H:%M:%S.", localtime(timestamp[j])) + f"{timestamp[j] % 1:.3f}".split(".")[1]
@@ -394,7 +397,7 @@ class Main:
 
     def countdown(self, seconds):
         for i in range(seconds, -1, -1):
-            print(f"\rWide Scan starts in:        {i}", end="")
+            print(f"\rMeasurement starts in:        {i}", end="")
             sleep(1)
 
 if __name__ == "__main__":
