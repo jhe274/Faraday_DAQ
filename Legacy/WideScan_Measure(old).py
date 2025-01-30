@@ -6,7 +6,10 @@ from toptica.lasersdk.dlcpro.v2_5_3 import DLCpro, SerialConnection, DeviceNotFo
 from TopticaDLCpro.Laser import Laser
 # from Bristol871.old_Bristol_871A import Bristol871
 from Bristol871.Bristol_871A import Bristol871
-from DSP7265.dsp7265_lockin import LockInAmplifier
+from DSP7265.Lock_in_1f import L1f
+from DSP7265.Lock_in_2f import L2f
+from DSP7265.Lock_in_DC import DC
+from DSP7265.Lock_in_Mod import Mod
 from instruments.lakeshore import Lakeshore475
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 import numpy as np
@@ -23,13 +26,14 @@ bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}.csv'
 
 class Main:
     def __init__(self):
-        """Initialize all instruments, including lock-ins, Bristol, and TOPTICA DLC pro."""
         self.NI_channel = 'cDAQ1Mod4'
         self.system = nidaqmx.system.System.local()
         self.device = nidaqmx.system.Device(f'{self.NI_channel}')
         self.system.driver_version
-
-        """Bristol 871A-VIS"""
+        
+        """
+        Bristol 871A-VIS
+        """
         self.port_Bristol = 'COM6'                                                              # Serial port number
         self.auto_expo = 'ON'                                                                   # 'ON' or 'OFF'
         self.cali_meth = 'TEMP'                                                                 # 'TIME' or 'TEMP'
@@ -40,7 +44,9 @@ class Main:
         self.aver_type = 'WAV'
         self.aver_coun = 20
 
-        """TOPTICA DLC pro"""
+        """
+        TOPTICA DLC pro
+        """
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
@@ -62,16 +68,61 @@ class Main:
         self.Ch1_CutOff = 0.7 * self.fram_rate / 2
         self.Ch2_CutOff = 4300
 
-        """Signal Recovery DSP 7265 Lock-in Amplifiers"""
-        lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 49.11, "gain": 0, "sens": 10e-3, "TC": 100E-3},
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -165.74, "gain": 0, "sens": 10e-3, "TC": 100E-3},
-            "DC": {"gpib": 9, "harmonic": 1, "phase": -12.50, "gain": 0, "sens": 1, "TC": 100E-3},
-            "Mod": {"gpib": 6, "harmonic": 1, "phase": 144.37, "gain": 0, "sens": 500e-3, "TC": 100E-3},
-        }
+        """
+        Mod lock-in amplifier, model DSP7265
+        Reference frequency = 0.1 Hz
+        """
+        self.mod = Mod(6)                                                                       # GPIB address: 6
+        self.lockin_mod = "Mod lock-in amplifier"
+        self.harm_mod = 1                                                                       # Reference Haromnic: 1st
+        self.phase_mod = 144.37                                                                 # Reference Phase: [°]
+        self.gain_mod = 0                                                                       # AC Gain: [dB]
+        self.sens_mod = 500e-3                                                                  # Sensitivity: [V]
+        self.TC_mod = 100E-3                                                                    # Time Constant: [s]
+        self.len_mod = 16384                                                                    # Storage points
+        self.STR_mod = 100E-3                                                                   # Curve buffer Storage Interval: [s/point]
 
-        self.lockins = {name: LockInAmplifier(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
-        self.lockin_settings = lockin_settings
+        """
+        1f lock-in amplifier, model DSP7265
+        Reference frequency = 50,000 Hz
+        """
+        self.l1f = L1f(7)                                                                       # GPIB address: 7
+        self.lockin_1f = "1f lock-in amplifier"
+        self.harm_1f = 1                                                                        # Reference Haromnic: 1st
+        self.phase_1f = 49.11                                                                    # Reference Phase: [°]
+        self.gain_1f = 0                                                                        # AC Gain: [dB]
+        self.sens_1f = 10e-3                                                                     # Sensitivity: [V]
+        self.TC_1f = 100E-3                                                                     # Time Constant: [s]
+        self.len_1f = 16384                                                                     # Storage points
+        self.STR_1f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
+
+        """
+        2f lock-in amplifier, model DSP7265
+        Reference frequency = 50 kHz
+        """
+        self.l2f = L2f(8)                                                                       # GPIB address: 8
+        self.lockin_2f = "2f lock-in amplifier"
+        self.harm_2f = 2                                                                        # Reference Haromnic: 2nd
+        self.phase_2f = -165.74                                                                  # Reference Phase: [°]
+        self.gain_2f = 0                                                                        # AC Gain: [dB]
+        self.sens_2f = 10e-3                                                                     # Sensitivity: [V]
+        self.TC_2f = 100E-3                                                                     # Time Constant: [s]
+        self.len_2f = 16384                                                                     # Storage points
+        self.STR_2f = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
+
+        """
+        DC lock-in amplifier, model DSP7265
+        Reference frequency = 1-2 kHz
+        """
+        self.dc = DC(9)                                                                         # GPIB address: 9
+        self.lockin_dc = "DC lock-in amplifier"
+        self.harm_dc = 1                                                                        # Reference Haromnic: 1st
+        self.phase_dc = -12.50                                                                   # Reference Phase: [°]
+        self.gain_dc = 0                                                                        # AC Gain: [dB]
+        self.sens_dc = 1                                                                   # Sensitivity: [V]
+        self.TC_dc = 100e-3                                                                     # Time Constant: [s]
+        self.len_dc = 16384                                                                     # Storage points
+        self.STR_dc = 100E-3                                                                    # Curve buffer Storage Interval: [s/point]
 
         """
         Measurement settings
@@ -93,7 +144,9 @@ class Main:
         self.triple_fall = [False, False, False]
 
     def config_NIcDAQ(self):
-        """NI-cDAQ-9172, using Mod4 for trigger signal control"""
+        """
+        NI-cDAQ-9172, using Mod4 for trigger signal control
+        """
         device_found = False
         for device in self.system.devices:
             if device.name == self.NI_channel:
@@ -111,14 +164,18 @@ class Main:
             sys.exit(1)
 
     def config_DLCpro(self):
-        """TOPTICA DLC pro"""
+        """
+        TOPTICA DLC pro
+        """
         self.laser.WideScan(self.OutputChannel, self.ScanOffset, self.StartVoltage,
                             self.EndVoltage, self.ScanSpeed, self.ScanShape,
                             self.WideScanDuration, self.InputTrigger, self.RecorderStepsize,
                             self.Ch1, self.Ch2, self.LPfilter, self.Ch1_CutOff, self.Ch2_CutOff)
 
     def config_Bristol(self):
-        """Bristol wavelenght meter, model 871A-VIS4K"""
+        """
+        Bristol wavelenght meter, model 871A-VIS4K
+        """
         try:
             self.b = Bristol871(self.port_Bristol)
             print('Detector type =          ', self.b.detector('CW'))                           # Detector type = CW
@@ -140,39 +197,68 @@ class Main:
             sys.exit(1)
 
     def config_lock_ins(self):
-        """Configure all lock-ins using a loop."""
+        """
+        Configure triple modulation lock-ins and set buffer to trigger mode
+        """
         try:
-            for name, lockin in self.lockins.items():
-                settings = self.lockin_settings[name]
-                print(settings["phase"], settings["harmonic"])
-                lockin.reference_channel(settings["phase"], settings["harmonic"])
-                lockin.filters(settings["gain"], settings["TC"], settings["sens"])
-                lockin.trigger_buffer()
-                print(f"{name} Lock-in Amplifier successfully configured!")
+            self.mod.reference_channel(self.phase_mod, self.harm_mod)
+            self.mod.filters(self.gain_mod, self.TC_mod, self.sens_mod)
+            # self.mod.auto_functions()
+            self.mod.trigger_buffer()
+            print(f'{self.lockin_mod} successfully configured!')
+
+            self.l1f.reference_channel(self.phase_1f, self.harm_1f)
+            self.l1f.filters(self.gain_1f, self.TC_1f, self.sens_1f)
+            # self.l1f.auto_functions()
+            self.l1f.trigger_buffer()
+            print(f'{self.lockin_1f} successfully configured!')
+
+            self.l2f.reference_channel(self.phase_2f, self.harm_2f)
+            self.l2f.filters(self.gain_2f, self.TC_2f, self.sens_2f)
+            # self.l2f.auto_functions()
+            self.l2f.trigger_buffer()
+            print(f'{self.lockin_2f} successfully configured!')
+
+            self.dc.reference_channel(self.phase_dc, self.harm_dc)
+            self.dc.filters(self.gain_dc, self.TC_dc, self.sens_dc)
+            # self.dc.auto_functions()
+            self.dc.trigger_buffer()
+            print(f'{self.lockin_dc} successfully configured!\n')
+
         except Exception as e:
-            print(f"SR7265 Lock-in amplifier configuration failed: {e}")
+            print('SR7265 Lock-in amplifier not found: {}\n'.format(e))
             sys.exit(1)
     
     def init_buffer(self):
-        """Initialize Bristol wavelength meter buffer"""
+        """
+        Initialize Bristol wavelength meter buffer
+        """
         try:
             self.b.buffer('INIT')                                                                   # Initilize buffer
             print('Bristol buffer initialized!\n')
         except Exception as e:
             print('Bristol871 wavelength meter buffer initialization failed: {}\n'.format(e))
             sys.exit(1)
-            
-        """Initialize buffers for all lock-ins using a loop."""
+        """
+        Initialize triple modulation lock-in buffers
+        """
         try:
-            for lockin in self.lockins.values():
-                lockin.init_curve_buffer(16384, 100E-3)
-            print("All lock-in buffers initialized!\n")
+            self.mod.init_curve_buffer(self.len_mod, self.STR_mod)
+            print(f'{self.lockin_mod} buffer initialized!')
+            self.l1f.init_curve_buffer(self.len_1f, self.STR_1f)
+            print(f'{self.lockin_1f} buffer initialized!')
+            self.l2f.init_curve_buffer(self.len_2f, self.STR_2f)
+            print(f'{self.lockin_2f} buffer initialized!')
+            self.dc.init_curve_buffer(self.len_dc, self.STR_dc)
+            print(f'{self.lockin_dc} buffer initialized!\n')
         except Exception as e:
-            print(f"SR7265 Lock-in amplifier buffer initialization failed: {e}")
+            print('SR7265 Lock-in amplifier buffer initialization failed: {}\n'.format(e))
             sys.exit(1)
 
     def EXT_trig_measure(self):
-        """External trgiger mrthod for Bristol wavelength meter during measurements"""
+        """
+        External trgiger mrthod for Bristol wavelength meter during measurements
+        """
         print('Bristol wavelength meter is operating at EXTERNAL trigger mode...')
         with nidaqmx.Task() as task:
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line0")                      # DIO0: Gate12, Bristol
@@ -205,8 +291,10 @@ class Main:
                         i = i + 1
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.EXT_peri):4d}", 's', end='')
                     sleep(self.EXT_L)
-                    for lockin in self.lockins.values():
-                        lockin.halt_buffer()
+                    self.mod.halt_buffer()
+                    self.l1f.halt_buffer()
+                    self.l2f.halt_buffer()
+                    self.dc.halt_buffer()
                     self.b.buffer('CLOS')
                     elap_time = perf_counter() - t0
                     task.write(self.triple_fall)
@@ -227,7 +315,9 @@ class Main:
         return start_time, elap_time, timestamps
     
     def INT_trig_measure(self):
-        """Internal trgiger mrthod for Bristol wavelength meter during measurements"""
+        """
+        Internal trgiger mrthod for Bristol wavelength meter during measurements
+        """
         print('Bristol wavelength meter is operating at INTERNAL trigger mode...')
         with nidaqmx.Task() as task:
             # Logic TTL at the selected DIO channel gates
@@ -255,8 +345,10 @@ class Main:
                             pass
                         i = i + 1
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.INT_peri):4d}", 's', end='')
-                    for lockin in self.lockins.values():
-                        lockin.halt_buffer()
+                    self.mod.halt_buffer()
+                    self.l1f.halt_buffer()
+                    self.l2f.halt_buffer()
+                    self.dc.halt_buffer()
                     self.b.buffer('CLOS')
                     elap_time = perf_counter() - t0
                     task.write(self.double_fall)
@@ -275,29 +367,31 @@ class Main:
         return start_time, elap_time, timestamps
     
     def get_lock_in_buffer(self, path, filename, t0):
-        """Retrieve data from all lock-in amplifiers' buffers."""
-        print("\nRetrieving data from lock-in amplifiers buffer...")
-
+        """
+        Retrieve data from lock-in buffers
+        """
+        print('\nRetrieving data from lock-in amplifiers buffer...')
+        buffers = [self.l1f, self.l2f, self.dc, self.mod]
+        sensitivities = [self.sens_1f, self.sens_2f, self.sens_dc, self.sens_mod]
+        
         data = []
         buffer_status = []
         timestamps = []
 
-        for name, lockin in self.lockins.items():
-            X, Y, status = lockin.get_curve_buffer(self.lockin_settings[name]["sens"])
-            print(f"{name} buffer status: {status}")
+        for buffer, sens in zip(buffers, sensitivities):
+            X, Y, status = buffer.get_curve_buffer(sens)
             data.extend([X, Y])
             buffer_status.append(status)
 
-        # Create timestamps for lock-ins
-        timestamp = [t0 + n * self.lockins["2f"].storage_interval for n in range(len(data[3]))]
-        formatted_timestamps = [
-            strftime("%Y-%m-%dT%H:%M:%S.", localtime(t)) + f"{t % 1:.3f}".split(".")[1]
-            for t in timestamp
-        ]
+        # Create a list of timestamps for lock-ins
+        L_times = [n * self.STR_2f for n in range(len(data[3]))]
+        timestamp = [t0 + t for t in L_times]
+
+        formatted_timestamps = [strftime("%Y-%m-%dT%H:%M:%S.", localtime(t)) + f"{t % 1:.3f}".split(".")[1] for t in timestamp]
         timestamps.extend(formatted_timestamps)
+
         data.insert(0, timestamps)
 
-        # Save lock-in buffer data
         try:
             counter = 1
             original_filename = filename
@@ -312,18 +406,19 @@ class Main:
             file_path = os.path.join(folder_path, filename)
 
             with open(file_path, "w") as log:
-                for key, lockin in self.lockins.items():
-                    log.write(f"#{key} Time Constant [s]: {lockin.TC}, Sensitivity [V]: {lockin.sens}\n")
+                for attribute, value in zip(['TC_1f[s]', 'SENS_1f[V]', 'TC_2f[s]', 'SENS_2f[V]', 'TC_dc[s]', 'SENS_dc[V]', 'TC_mod[s]', 'SENS_mod[V]'],
+                                            [self.TC_1f, self.sens_1f, self.TC_2f, self.sens_2f, self.TC_dc, self.sens_dc, self.TC_mod, self.sens_mod]):
+                    log.write(f'#{attribute} {value}\n')
 
-                log.write("#Field Input Voltage\n")
-                log.write("#Preamp gain\n")
-                header = "Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc,X_mod,Y_mod,\n"
+                log.write('#Field Input Voltage\n')
+                log.write('#Preamp gain\n')
+                header = 'Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_dc,Y_dc,X_mod,Y_mod,\n'
                 log.write(header)
 
                 for row in zip(*data):
-                    log.write(",".join(map(str, row)) + "\n")
+                    log.write(','.join(map(str, row)) + '\n')
         except Exception as e:
-            print(f"An error occurred while saving data: {e}")
+            print(f"An error occurred while saving data to the file: {e}")
 
     def countdown(self, seconds):
         for i in range(seconds, -1, -1):

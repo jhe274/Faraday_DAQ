@@ -6,80 +6,67 @@ import os, datetime
 from time import strftime, localtime
 
 class Bristol871(object):
-    """Class representing a Bristol 871 wavelength meter.
+    """Class representing a Bristol 871 device.
 
-    Attributes:
-        serial_port (Serial): Serial connection instance.
-        tn (Telnet): Telnet connection instance.
-        dev_addr (str): Device IP address.
-    """
+	Attributes:
+		serial_port: serial.Serial instance through which we talk to the
+			instrument.
 
+	"""
     START_TOKEN = 0x7E
     ESCAPE_TOKEN = 0x7D
     ESCAPE_XOR = 0x20
 
-    def __init__(self, port_number: str, ip_addr: str = "10.199.199.1", quiet: bool = False):
-        """Initializes the Bristol 871 device with Telnet and Serial connections."""
+    def __init__(self, port_number, ip_addr = '10.199.199.1', quiet=False):
         self.serial_port = Serial(port=port_number, baudrate=921600, timeout=5)
         self.dev_addr = ip_addr
         self.tn = Telnet(ip_addr, 23)
-
-        try:
-            # Flush telnet buffer on initialization
-            [self.readline() for _ in range(8)]
-
-            if not quiet:
-                self.tn.write(b"*IDN?\r\n")
-                print(self.readline(), "\n")
-        except Exception as e:
-            print(f"Error initializing Bristol 871: {e}")
-            self.__del__()
+        print()
+        [self.readline() for i in range(8)]                                                     # flushes the telnet header
+        if not quiet:
+            self.tn.write(b'*IDN?\r\n')                                                         # Perform a test communication
+            print(self.readline(),'\n')                                                         # and read the result to the terminal
     
-    def readline(self) -> str:
-        """Reads a line from the Telnet buffer."""
-        response = self.tn.read_until(b"\n", timeout=3).decode("utf-8")
-        if not response:
-            raise self.EmptyBuffer()
+    def readline(self):
+        response = self.tn.read_until(b'\n', timeout=3).decode('utf-8')
+        print(response)
+        if response == '':
+            raise self.EmptyBuffer
+            self.__del__()
         return response.strip()
     
     def __del__(self):
-        """Ensures the connection is closed when the object is deleted."""
-        try:
-            self.tn.close()
-            print(f"\nConnection to {self.dev_addr} closed.")
-        except Exception as e:
-            print(f"Error closing connection: {e}")
+        self.tn.close()
+        print(f'\nConnection to {self.dev_addr} closed.')
     
     class EmptyBuffer(Exception):
-        """Exception raised when attempting to read from an empty Telnet buffer."""
-        def __init__(self, message="Telnet buffer was empty, read timed out.") -> None:
-            super().__init__(message)
+        """
+        A User defined error message for when you tried to read from an empty telnet buffer
+        """
+        def __init__(self, message='Telnet buffer was empty, and the read command timed out after 3 seconds.') -> None:
+            self.message = message
+            super().__init__(self.message)
+        pass
 
     def write(self, message: str) -> None:
-        """Sends WRITE command to the Bristol 871 device."""
         self.tn.write(f'{message}\r\n'.encode('utf-8'))
 
     def query(self, message: str) -> str:
-        """Sends QUERY command and reads the response."""
-        self.write(message)
+        self.tn.write(f'{message}\r\n'.encode('utf-8'))
+
         return self.readline()
     
-    @staticmethod
-    def validate_input(value, valid_values, error_message):
-        """Validates if a value is within allowed values."""
-        if value not in valid_values:
-            raise ValueError(error_message)
-    
     def instr(self, command: str) -> str:
-        """Validates and returns a valid instrument command."""
-        commands = {"MEAS", "READ", "FETC"}
-        self.validate_input(command, commands, f"Invalid measurement instruction: {commands}")
-        return command
+        commands = {'MEAS', 'READ', 'FETC'}
+        if command in commands:
+            return command
+        else:
+            validate_input(command, commands, f'Measurement instruction must be one of {commands}.')
 
-    def all(self, command: str) -> str:
+    def all(self, command):
         """
         Returns the scan index, the instrument status, an input laser reading, and a power
-        reading for the highest measured peak.
+        reading for the tallest measured peak.
         """
         # print('Scan index:           ', self.query(f':{self.instr(command)}:ALL?').split(',')[0])
         # print('Instrument status:   ', self.query(f':{self.instr(command)}:ALL?').split(',')[1])
@@ -88,33 +75,33 @@ class Bristol871(object):
 
         return self.query(f':{self.instr(command)}:ALL?')
     
-    def environment(self, command: str) -> float:
+    def environment(self, command):
         """
         Returns the instrument's internal temperature in degrees Celsius (ºC) and
         pressure in millimeters of mercury (mm Hg).
         """
         return self.query(f':{self.instr(command)}:ENV?')
     
-    def frequency(self, command: str) -> float:
+    def frequency(self, command):
         """
         Returns an input laser reading in units of THz.
         """
         return float(self.query(f':{self.instr(command)}:FREQ?').strip())
     
-    def power(self, command: str) -> float:
+    def power(self, command):
         """
         Queries a power reading in either mW (milliwatts) or dBm as specified by the
         :UNIT:POWer function.
         """
         return self.query(f':{self.instr(command)}:POW?')
     
-    def wavelength(self, command: str) -> float:
+    def wavelength(self, command):
         """
         Returns an input laser wavelength value in units of nm.
         """
         return float(self.query(f':{self.instr(command)}:WAV?').strip())
         
-    def wavenumber(self, command: str) -> float:
+    def wavenumber(self, command):
         """
         Returns an input laser reading in units of cm^-1.
         """
@@ -129,21 +116,21 @@ class Bristol871(object):
     # data type, and then perform a calculate query.
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def get_value(self, value: str):
+    def get_value(self, value):
         """
         Returns a calculated value based on the :DELTa:METHod setting.
         """
         values = {'POW', 'FREQ', 'WAV', 'WNUM'}
-        self.validate_input(value, values, f'Input value must be one of {values}.')
+        validate_input(value, values, f'Input value must be one of {values}.')
 
         return self.query(f':CALC:DATA? {value}')
     
-    def delta_method(self, value: str):
+    def delta_method(self, value):
         """
         Sets the state of the method of the delta calculation to either STARt or MAXMin.
         """
         values = {'STAR', 'MAXM'}
-        self.validate_input(value, values, f'Input value must be one of {values}.')
+        validate_input(value, values, f'Input value must be one of {values}.')
         self.write(f':CALC:DELT:METH {value}')
 
         return self.query(':CALC:DELT:METH?')
@@ -161,7 +148,7 @@ class Bristol871(object):
         the CALC:RES command.
         """
         values = {'?', ':ELAP?'}
-        self.validate_input(value, values, f'Input value must be one of {values}.')
+        validate_input(value, values, f'Input value must be one of {values}.')
 
         return self.query(f':CALC:TIM{value}')
 
@@ -172,57 +159,62 @@ class Bristol871(object):
     # measurements can be internally stored and retrieved.
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def buffer(self, command: str):
+    def buffer(self, command):
         commands = {'INIT', 'OPEN', 'CLOS', 'DATA?'}
         if command in commands:
             self.write(f':MMEM:{command}\r\n')
         else:
-            self.validate_input(command, commands, f'Buffer instruction must be one of {commands}.')
+            validate_input(command, commands, f'Buffer instruction must be one of {commands}.')
 
-    def get_buffer(self, path: str, filename: str, acq_time: float, timestamps: list):
+    def get_buffer(self, path, filename, acq_time, timestamps):
         """
-        Retrieves buffered data from the instrument and saves it as a CSV file.
+        Get raw output from Bristol buffer
         """
         self.buffer('CLOS')
         self.buffer('DATA?')
         print('\nRetrieving data from Bristol buffer...')
         print('Getting first character:', self.tn.rawq_getchar())
 
-        # Extract the total number of bytes in the buffer
+        #Number of characters in the byte string
         num_bytes_char = int(self.tn.rawq_getchar())
-        total_bytes = sum(int(self.tn.rawq_getchar()) * 10 ** (num_bytes_char - i - 1) for i in range(num_bytes_char))
+        print('Number of bytes:', num_bytes_char)
 
-        print("Total bytes:", total_bytes)
-        num_samples = total_bytes // 20
-        print("Number of Samples:", num_samples)
-        print("Total time elapsed:", acq_time)
-        print("Sample Rate:", num_samples / acq_time)
+        #Finding total number of bytes
+        tot_bytes = 0
 
-        # Generate file path with unique naming
-        folder_name = datetime.datetime.now().strftime("%m-%d-%Y")
-        folder_path = os.path.join(path, folder_name)
-        os.makedirs(folder_path, exist_ok=True)
+        for indx in np.arange(0, num_bytes_char):
+            char = self.tn.rawq_getchar()
+            tot_bytes += int(char)*10**(num_bytes_char-indx-1)
 
-        counter = 1
-        original_filename = filename
-        while os.path.isfile(os.path.join(folder_path, filename)):
-            filename = f"{original_filename.split('.')[0]}_{counter}.csv"
-            counter += 1
+        print('Total bytes:', tot_bytes)
 
-        file_path = os.path.join(folder_path, filename)
-
-        # Retrieve and save data
+        #Computing number of samples
+        num_samples = int(tot_bytes/20)
+        print('Number of Samples:', num_samples)
+        print('Total time-elapsed:', acq_time)
+        print('Sample Rate:', num_samples/acq_time)
         try:
-            with open(file_path, "w") as log:
-                log.write("Timestamp,Status,Wavelength,Intensity\n")
+            counter = 1
+            original_filename = filename
+            folder_name = datetime.datetime.now().strftime("%m-%d-%Y")
+            folder_path = os.path.join(path, folder_name)
+            os.makedirs(folder_path, exist_ok=True)
+            
+            while os.path.isfile(os.path.join(folder_path, filename)):
+                filename = f"{original_filename.split('.')[0]}_{counter}.csv"
+                counter += 1
+            file_path = os.path.join(folder_path, filename)
+                
+            with open(file_path, 'w') as log:
+                header = 'Timestamp,Status,Wavelength,Intensity\n'
+                log.write(header)
                 for timestamp in timestamps:
-                    raw_data = b"".join(self.tn.rawq_getchar() for _ in range(20))
-                    wvl, pwr, status, _ = struct.unpack("<dfII", raw_data)
-                    log.write(f"{timestamp},{str(status).zfill(5)},{wvl:.7f},{pwr:.3f}\n")
-
-            print(f"Successfully saved {len(timestamps)} measurements from Bristol buffer.")
+                    raw_data = b''.join(self.tn.rawq_getchar() for _ in range(20))
+                    wvl, pwr, status, _ = struct.unpack('<dfII', raw_data)
+                    log.write('{},{},{:.7f},{:.3f}\n'.format(timestamp, str(status).zfill(5), wvl, pwr))
+            print('Succesfully saved {} measurements from Bristol buffer.'.format(len(timestamps)))
         except Exception as e:
-            print(f"Error saving data: {e}")
+            print(f"An error occurred while saving data to the file: {e}")
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # SENSe Subsystem
@@ -238,7 +230,7 @@ class Bristol871(object):
         if value in values:
             self.write(f':SENS:AVER:COUN {value}')                              # RST Value = 2
         else:
-            self.validate_input(value, values, f'Input value must be one of {values}.')
+            validate_input(value, values, f'Input value must be one of {values}.')
 
         return self.query(':SENS:AVER:COUN?')
     
@@ -250,7 +242,7 @@ class Bristol871(object):
         """
         values = {'POW', 'FREQ', 'WAV', 'WNUM'}
         if value not in values:
-            self.validate_input(value, values, f'Input value must be one of {values}.')
+            validate_input(value, values, f'Input value must be one of {values}.')
 
         return self.query(f':SENS:AVER:DATA? {value}')
     
@@ -260,7 +252,7 @@ class Bristol871(object):
         """
         values = {'OFF', 'ON'}
         if value not in values:
-            self.validate_input(value, values, f'Input value must be one of {values}.')
+            validate_input(value, values, f'Input value must be one of {values}.')
 
         self.write(f':SENS:AVER:STAT {value}')
 
@@ -280,7 +272,7 @@ class Bristol871(object):
         """
         values = {'TIME', 'TEMP'}
         if value not in values:
-            self.validate_input(value, values, f'Input value must be one of {values}.')
+            validate_input(value, values, f'Input value must be one of {values}.')
         else:
             self.write(f':SENS:CALI:METH {value}')                              # RST = TEMPerature
 
@@ -295,7 +287,7 @@ class Bristol871(object):
         values = range(1,51)
         if self.query(':SENS:CALI:METH?') == 'TEMPerature':
             if value not in values:
-                self.validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
+                validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
             else:
                 self.write(f':SENS:CALI:TEMP {value}')                          # RST Value = 5
                 print(f'Temperature delta =       {value / 10}°C.')
@@ -312,7 +304,7 @@ class Bristol871(object):
         values = range(5,1441)
         if self.query(':SENS:CALI:METH?') == 'TIME':
             if value not in values:
-                self.validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
+                validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
             else:
                 self.write(f':SENS:CALI:TIM {value}')                           # RST Value = 30
                 print(f'Time delta is {value} min.')
@@ -329,7 +321,7 @@ class Bristol871(object):
         """
         values = {'CW', 'PULS'}
         if value not in values:
-            self.validate_input(value, values, f'Input value must be one of {values}.')
+            validate_input(value, values, f'Input value must be one of {values}.')
         else:
             self.write(f":SENS:DET:FUNC {value}")                               # RST Value = CW
 
@@ -343,7 +335,7 @@ class Bristol871(object):
         """
         values = {'ON', 'OFF'}
         if value not in values:
-            self.validate_input(value, values, f'Input value must be one of {values}.')
+            validate_input(value, values, f'Input value must be one of {values}.')
         else:
             self.write(f':SENS:EXP:AUTO {value}')                               # RST Value = ON
 
@@ -371,9 +363,9 @@ class Bristol871(object):
             if value in values:
                 self.write(f':SENS:PID:LCON:{type} {str(value)}')
             else:
-                self.validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
+                validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
         else:
-            self.validate_input(type, types, f'Input value must be one of {types}.')
+            validate_input(type, types, f'Input value must be one of {types}.')
         
         return self.query(f':SENS:PID:LCON:{type}?')
     
@@ -392,7 +384,7 @@ class Bristol871(object):
         if type(setPoint) == float:
             self.write(f':SENSe:PID:SPO {setPoint}')                            # RST Value = 1000
         else:
-            self.validate_input(setPoint, values, f'Input value must be in the range{min(values), max(values)}.')
+            validate_input(setPoint, values, f'Input value must be in the range{min(values), max(values)}.')
 
         return self.query(':SENSe:PID:SPO?')
     
@@ -403,7 +395,7 @@ class Bristol871(object):
         """
         values = {'OFF', 'ON'}
         if value not in values:
-            self.validate_input(value, values, f'Input value must be one of {values}.')
+            validate_input(value, values, f'Input value must be one of {values}.')
         else:
             self.write(f':SENS:PID:STAT {value}')                               # RST Value = OFF
 
@@ -418,7 +410,7 @@ class Bristol871(object):
         if value in values:
             self.write(f':SENS:PID:VOLT:DEF {value}')                           # RST Value = -5.0
         else:
-            self.validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
+            validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
 
         return self.query(':SENS:PID:VOLT:DEF?')
     
@@ -431,7 +423,7 @@ class Bristol871(object):
         if value in values:
             self.write(f':SENS:PID:VOLT:MAX {value}')                           # RST Value = 5.0
         else:
-            self.validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
+            validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
 
         return self.query(':SENS:PID:VOLT:MAX?')
     
@@ -444,7 +436,7 @@ class Bristol871(object):
         if value in values:
             self.write(f':SENS:PID:VOLT:MIN {value}')                           # RST Value = 5.0
         else:
-            self.validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
+            validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
 
         return self.query(':SENS:PID:VOLT:MIN?')
     
@@ -457,7 +449,7 @@ class Bristol871(object):
         if value in values:
             self.write(f':SENS:PID:VOLT:OFFS {value}')                          # RST Value = 0.0
         else:
-            self.validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
+            validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
 
         return self.query(':SENS:PID:VOLT:OFFS?')
     
@@ -470,7 +462,7 @@ class Bristol871(object):
         if value in values:
             self.write(f':SENSE:PID:VOLT:SCAL {value}')                         # RST Value = 1.0
         else:
-            self.validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
+            validate_input(value, values, f'Input value must be in the range{min(values), max(values)}.')
 
         return self.query(':SENS:PID:VOLT:SCAL?')
 
@@ -489,7 +481,7 @@ class Bristol871(object):
         if value in values:
             self.write(f':TRIG:SEQ:METH {value}')
         else:
-            self.validate_input(value, values, f'Input value must be one of {values}.')
+            validate_input(value, values, f'Input value must be one of {values}.')
 
         return self.query(':TRIG:SEQ:METH?')
 
@@ -506,7 +498,7 @@ class Bristol871(object):
         if value in values:
             self.write(f':TRIG:SEQ:RATE {value}')                               # RST Value = 500
         else:
-            self.validate_input(value, values, f'Input value must be one of {values}.')
+            validate_input(value, values, f'Input value must be one of {values}.')
 
         return self.query(f':TRIG:SEQ:RATE?')
     
@@ -551,7 +543,7 @@ class Bristol871(object):
         if value in values:
             self.write(f':STAT:QUES:ENAB {value}')
         else:
-            self.validate_input(value, values, f"Input value must be one of {sorted(values)}.")
+            validate_input(value, values, f"Input value must be one of {sorted(values)}.")
 
         return self.query(':STAT:QUES:ENAB?')
     
@@ -596,4 +588,7 @@ class Bristol871(object):
 
 if __name__ == "__main__":
     Bristol871()
-    # Bristol871(port_number="/dev/ttyUSB0")  # Example serial port
+
+def validate_input(value, values, error):
+    if value not in values:
+        raise ValueError(error)
