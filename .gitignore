@@ -1,2 +1,5 @@
 # ignore ALL files in ANY directory named .venv
 .venv/
+Legacy/
+test scripts/
+FieldCrumley/
