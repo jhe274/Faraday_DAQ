@@ -4,7 +4,6 @@ from datetime import datetime as dt
 import nidaqmx.system, nidaqmx.system.storage
 from toptica.lasersdk.dlcpro.v2_5_3 import DLCpro, SerialConnection, DeviceNotFoundError
 from TopticaDLCpro.Laser import Laser
-# from Bristol871.old_Bristol_871A import Bristol871
 from Bristol871.Bristol_871A import Bristol871
 from pymeasure.instruments.signalrecovery import DSP7265
 from instruments.lakeshore import Lakeshore475
@@ -15,11 +14,8 @@ dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
 K_vapor = os.path.join(dir_path, 'K vapor cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
 DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro data')
-DLCpro_file = f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv'
 lockin_path = os.path.join(K_vapor, 'Lockins data')
-lockin_file = f'Faraday_lockins_{dt.now().strftime("%Y-%m-%d")}.lvm'
 bristol_path = os.path.join(K_vapor, 'Bristol data')
-bristol_file = f'Bristol_{dt.now().strftime("%Y-%m-%d")}.csv'
 
 class Main:
     def __init__(self):
@@ -129,7 +125,7 @@ class Main:
                             self.Ch1, self.Ch2, self.LPfilter, self.Ch1_CutOff, self.Ch2_CutOff)
 
     def config_Bristol(self):
-        """Bristol wavelenght meter, model 871A-VIS4K"""
+        """Bristol wavelenght meter, model 871A-VIS"""
         try:
             self.b = Bristol871(self.port_Bristol)
             print('Detector type =          ', self.b.detector('CW'))                           # Detector type = CW
@@ -238,7 +234,7 @@ class Main:
                     print("=============== Wide Scan Completed ===============")
                     dlcpro.laser1.wide_scan.stop()
                     result = self.laser.get_recorder_data(dlcpro.laser1)
-                    self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
+                    # self.laser.save_recorder_data(DLCpro_path, f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv', result)
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
             print(f'{self.EXT_NPeri} periods of {self.EXT_peri} seconds')
@@ -267,7 +263,7 @@ class Main:
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n=============== Wide Scan Initiated ===============")
-                    self.b.buffer('OPEN')
+                    self.b.buffer('OPEN')                                                       # Essentially a gated open buffer command
                     start_time = time()
                     task.write(self.double_rise)
                     while i < self.INT_NPeri:
@@ -288,7 +284,7 @@ class Main:
                     print("\n=============== Wide Scan Completed ===============")
                     dlcpro.laser1.wide_scan.stop()
                     # result = self.laser.get_recorder_data(dlcpro.laser1)
-                    # self.laser.save_recorder_data(DLCpro_path, DLCpro_file, result)
+                    # self.laser.save_recorder_data(DLCpro_path, f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv', result)
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
             task.stop()
@@ -302,8 +298,11 @@ class Main:
     def measure(self):
         """Run measurement sequence."""
         # Check if buffer length is exceeded
-        buffer_lengths = {name: self.WideScanDuration / self.lockin_settings[name]["interval"] for name in self.lockins}
-        exceeded = [name for name, length in buffer_lengths.items() if length > self.lockin_settings[name]["length"]]
+        exceeded = [
+            name
+            for name in self.lockins
+            if self.WideScanDuration / self.lockin_settings[name]["interval"] > self.lockin_settings[name]["length"]
+        ]
 
         if exceeded:
             print(f"Number of data points exceeds buffer length for: {', '.join(exceeded)}.")
@@ -323,7 +322,6 @@ class Main:
         print("\nRetrieving data from lock-in amplifiers buffer...")
 
         data = []
-        buffer_status = []
         timestamps = []
 
         for name, lockin in self.lockins.items():
@@ -338,13 +336,12 @@ class Main:
             except Exception as e:
                 print(f"Error retrieving data from {name} lock-in: {e}")
 
-        # Create timestamps for lock-ins
-        timestamp = [t0 + n * self.lockin_settings["2f"]["interval"] for n in range(len(data[3]))]
-        formatted_timestamps = [
+        # Generate timestamps for lock-ins
+        timestamp_values = [t0 + n * self.lockin_settings["2f"]["interval"] for n in range(len(data[0]))]
+        timestamps = [
             strftime("%Y-%m-%dT%H:%M:%S.", localtime(t)) + f"{t % 1:.3f}".split(".")[1]
-            for t in timestamp
+            for t in timestamp_values
         ]
-        timestamps.extend(formatted_timestamps)
         data.insert(0, timestamps)
 
         # Save lock-in buffer data
