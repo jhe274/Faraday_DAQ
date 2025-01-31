@@ -157,9 +157,8 @@ Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_DC,Y_DC,X_Mod,Y_Mod
 ---
 ## Future Enhancements 🚀
 This repository is **modular and expandable**. Future plans include:
-- 📡 **Real-time plotting** of measurements.
 - 📊 **Machine learning models** for Faraday rotation analysis.
-- 🔄 **Support for additional instruments (e.g., Keysight, SRS lock-ins)**.
+- 🔄 **Support for additional instruments (e.g., Keysight, LakeShore DSP 275 Gaussmeter)**.
 
 ---
 ## Contributions 🤝
