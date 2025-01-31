@@ -85,6 +85,7 @@ This script controls:
 - **DSP 7265 lock-in amplifiers** (using `pymeasure.instruments.signalrecovery.DSP7265`)
 - **Wavetek 50 MHz Function generator, model 80** for voltage controlled magnetic field modulation
 - **NI-cDAQ-9172** for triggering
+
 These scripts are optimized for:
 - **Voltage controlled magnetic field modulation**
 - **Synchronous data acquisition**
