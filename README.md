@@ -30,9 +30,9 @@ The code is structured to facilitate **expandability**, allowing users to integr
 ├── 📂 pymeasure/
 ├──── 📂 instruments/
 ├────── 📂 signalrecovery/
-│       ├── dsp7265.py            # Module initialization (Note: Using `pymeasure` for lock-in control)
+│       ├── dsp7265.py         # Module initialization (Note: Using `pymeasure` for lock-in control)
 │       ├── dsp_base.py
-│       ├── __init__.py            # Module initialization
+│       ├── __init__.py        # Module initialization
 │
 ├── 📂 TopticaDLCpro/
 │   ├── Laser.py               # Control script for TOPTICA DLC Pro Tunable Diode Laser
