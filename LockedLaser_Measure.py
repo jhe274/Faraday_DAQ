@@ -7,11 +7,11 @@ from pymeasure.instruments.signalrecovery import DSP7265
 from instruments.lakeshore import Lakeshore475
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 
-dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
-K_vapor = os.path.join(dir_path, 'K vapor cell')
+dir_path = os.path.join(os.getcwd(), 'Faraday_rotation_measurements')
+K_vapor = os.path.join(dir_path, 'K_vapor_cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
-lockin_path = os.path.join(K_vapor, 'Lockins data')
-bristol_path = os.path.join(K_vapor, 'Bristol data')
+lockin_path = os.path.join(K_vapor, 'Lockins_data')
+bristol_path = os.path.join(K_vapor, 'Bristol_data')
 
 class Main:
     def __init__(self):
@@ -34,21 +34,21 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 49.11, "gain": 0, "sens": 10e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": -129.16, "gain": 10, "sens": 2e-3, "TC": 320e-6, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 32768, "interval": 100e-3},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -165.74, "gain": 0, "sens": 10e-3, "TC": 100e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": -168.74, "gain": 10, "sens": 10e-3, "TC": 320e-6, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 32768, "interval": 100e-3},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": -12.50, "gain": 0, "sens": 1, "TC": 100E-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": -177.28, "gain": 0, "sens": 500e-3, "TC": 10, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 32768, "interval": 100e-3},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
 
-            "Mod": {"gpib": 6, "harmonic": 1, "phase": 144.37, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
-                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 0, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 32768, "interval": 100e-3},
+            "Mod": {"gpib": 6, "harmonic": 1, "phase": 144.37, "gain": 0, "sens": 1, "TC": 10, 
+                    "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
@@ -56,7 +56,7 @@ class Main:
         
         """Wavetek 50 MHz Function generator, model 80"""
         self.B0_sweep_period = 1 / (500e-3)                                                     # [s]
-        self.B0_sweep_NPeriods = 2
+        self.B0_sweep_NPeriods = 300                                                            # Number of periods
         self.B0_sweep_times = [(i*self.B0_sweep_period) for i in range(self.B0_sweep_NPeriods)] # Measurement time array while using INTERNAL trigger
         
         """Measurement time with Helmholtz coil modulation"""
@@ -242,13 +242,11 @@ class Main:
                 while perf_counter() - t0 < self.B0_sweep_times[i]:
                     pass
                 task.write(self.double_rise)
-                print("I rised!")
                 t1 = perf_counter()
                 while perf_counter() - t1 < (self.B0_sweep_period/2):
                     pass
 
                 task.write(self.field_fall)
-                print("I fell!")
                 i = i + 1
                 print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.B0_sweep_period):4d}", 's', end='')
 

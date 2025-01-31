@@ -10,12 +10,12 @@ from instruments.lakeshore import Lakeshore475
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 import numpy as np
 
-dir_path = os.path.join(os.getcwd(), 'Faraday rotation measurements')
-K_vapor = os.path.join(dir_path, 'K vapor cell')
+dir_path = os.path.join(os.getcwd(), 'Faraday_rotation_measurements')
+K_vapor = os.path.join(dir_path, 'K_vapor_cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
-DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro data')
-lockin_path = os.path.join(K_vapor, 'Lockins data')
-bristol_path = os.path.join(K_vapor, 'Bristol data')
+DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro_data')
+lockin_path = os.path.join(K_vapor, 'Lockins_data')
+bristol_path = os.path.join(K_vapor, 'Bristol_data')
 
 class Main:
     def __init__(self):
