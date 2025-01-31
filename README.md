@@ -144,9 +144,9 @@ Data is **automatically saved** in organized directories under `Faraday rotation
 
 ### 📑 Example CSV Format for Bristol Data
 ```csv
-Timestamp,Wavelength (nm),Power (mW)
-2024-01-30T12:30:01.123,770.123456,0.512
-2024-01-30T12:30:02.456,770.124678,0.510
+Timestamp,Status,Wavelength (nm),Power (mW)
+2024-01-30T12:30:01.123,00004,770.123456,0.512
+2024-01-30T12:30:02.456,00004,770.124678,0.510
 ```
 
 ### 📑 Example LVM Format for Lock-In Data
