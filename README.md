@@ -86,9 +86,11 @@ This script controls:
 - **Wavetek 50 MHz Function generator, model 80** for voltage controlled magnetic field modulation
 - **NI-cDAQ-9172** for triggering
 These scripts are optimized for:
-- **High-precision magnetic field modulation**
+- **Voltage controlled magnetic field modulation**
 - **Synchronous data acquisition**
 - **Automated timestamp logging**
+- **Support both triggered/gated mode for triggering Bristol wavelengthm meter during meausurement**
+- **Automated data saving process**
 
 ---
 ## Instrument Control Modules
@@ -104,7 +106,7 @@ These scripts are optimized for:
 
 ### 🔬 **TOPTICA DLC Pro Tunable Diode Laser**
 - **Full integration** with the TOPTICA SDK.
-- Supports **wide-scan control, triggering, and real-time data acquisition**.
+- Supports **wide-scan control, triggering, and post measurement data acquisition**.
 
 ### 🏷 **National Instruments cDAQ-9172**
 - Used for **synchronized triggering** of all devices.
