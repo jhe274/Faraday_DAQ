@@ -135,11 +135,11 @@ Data is **automatically saved** in organized directories under `Faraday rotation
 │   │
 │   ├── 📂 TC300_data/
 │   │   ├── 📂 XX-XX-20XX
-│   │       ├── Faraday_lockins_20XX-XX-XX.lvm
+│   │       ├── Faraday_lockins_20XX-XX-XX.csv
 │   │
 │   ├── 📂 TopticaDLCpro_data/
 │   │   ├── 📂 XX-XX-20XX
-│   │       ├── Faraday_lockins_20XX-XX-XX.lvm
+│   │       ├── Faraday_lockins_20XX-XX-XX.csv
 ```
 
 ### 📑 Example CSV Format for Bristol Data
