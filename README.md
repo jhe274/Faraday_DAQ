@@ -173,5 +173,5 @@ This repository is licensed under the **MIT License**.
 ## Contact
 🔬 **Maintainer:** Jiachen He  
 📧 Email: jiachen.he@outlook.com 
-🌐 Website: [[Your Personal/Institutional Website](https://jhe274.github.io/portfolio-bruce.github.io//)]
+🌐 Website: [https://jhe274.github.io/portfolio-bruce.github.io//]
 
