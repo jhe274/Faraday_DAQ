@@ -1,4 +1,4 @@
-# Faraday Rotation Measurement System
+# Polarization Modulation Ellipsometer Measurement System
 
 ## Overview
 This repository provides a **comprehensive and modular control system** for conducting **polarization modulation ellipsometry (PME) measurements** using a variety of scientific instruments, including:
@@ -30,9 +30,9 @@ The code is structured to facilitate **expandability**, allowing users to integr
 ├── 📂 pymeasure/
 ├──── 📂 instruments/
 ├────── 📂 signalrecovery/
-│       ├── dsp7265.py            # Module initialization (Note: Using `pymeasure` for lock-in control)
+│       ├── dsp7265.py         # Module initialization (Note: Using `pymeasure` for lock-in control)
 │       ├── dsp_base.py
-│       ├── __init__.py            # Module initialization
+│       ├── __init__.py        # Module initialization
 │
 ├── 📂 TopticaDLCpro/
 │   ├── Laser.py               # Control script for TOPTICA DLC Pro Tunable Diode Laser
@@ -135,18 +135,18 @@ Data is **automatically saved** in organized directories under `Faraday rotation
 │   │
 │   ├── 📂 TC300_data/
 │   │   ├── 📂 XX-XX-20XX
-│   │       ├── Faraday_lockins_20XX-XX-XX.lvm
+│   │       ├── Faraday_lockins_20XX-XX-XX.csv
 │   │
 │   ├── 📂 TopticaDLCpro_data/
 │   │   ├── 📂 XX-XX-20XX
-│   │       ├── Faraday_lockins_20XX-XX-XX.lvm
+│   │       ├── Faraday_lockins_20XX-XX-XX.csv
 ```
 
 ### 📑 Example CSV Format for Bristol Data
 ```csv
-Timestamp,Wavelength (nm),Power (mW)
-2024-01-30T12:30:01.123,770.123456,0.512
-2024-01-30T12:30:02.456,770.124678,0.510
+Timestamp,Status,Wavelength (nm),Power (mW)
+2024-01-30T12:30:01.123,00004,770.123456,0.512
+2024-01-30T12:30:02.456,00004,770.124678,0.510
 ```
 
 ### 📑 Example LVM Format for Lock-In Data
