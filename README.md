@@ -1,4 +1,4 @@
-# Polarization Modulation Ellipsometey Measurement System
+# Polarization Modulation Ellipsometry Measurement System
 
 ## Overview
 This repository provides a **comprehensive and modular control system** for conducting **polarization modulation ellipsometry (PME) measurements** using a variety of scientific instruments, including:
