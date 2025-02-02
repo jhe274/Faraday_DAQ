@@ -16,7 +16,7 @@ bristol_path = os.path.join(K_vapor, 'Bristol_data')
 class Main:
     def __init__(self):
         """Initialize all instruments, including lock-ins, Bristol, and experiment settings."""
-        self.NI_channel = 'cDAQ1Mod4'
+        self.NI_channel = 'cDAQ1Mod5'
         self.system = nidaqmx.system.System.local()
         self.device = nidaqmx.system.Device(f'{self.NI_channel}')
         self.system.driver_version
@@ -24,8 +24,8 @@ class Main:
         """Bristol 871A-VIS"""
         self.port_Bristol = 'COM6'                                                              # Serial port number
         self.auto_expo = 'ON'                                                                   # 'ON' or 'OFF'
-        self.cali_meth = 'TEMP'                                                                 # 'TIME' or 'TEMP'
-        self.delta_temp = 5                                                                     # Delta T = 0.5°C
+        self.cali_meth = 'TIME'                                                                 # 'TIME' or 'TEMP'
+        self.delta_t = 5                                                                        # Delta T = 5 min
         self.trig_meth = 'INT'                                                                  # 'INT' or 'RISE' or 'FALL'
         self.fram_rate = 100                                                                    # [Hz]
         self.aver_stat = 'OFF'                                                                  # 'ON' or 'OFF'
@@ -34,19 +34,19 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": -129.16, "gain": 10, "sens": 2e-3, "TC": 320e-6, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": -129.16, "gain": 10, "sens": 1e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -168.74, "gain": 10, "sens": 10e-3, "TC": 320e-6, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": -168.93, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": -177.28, "gain": 0, "sens": 500e-3, "TC": 10, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": -168.79, "gain": 0, "sens": 500e-3, "TC": 10, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
 
-            "Mod": {"gpib": 6, "harmonic": 1, "phase": 144.37, "gain": 0, "sens": 1, "TC": 10, 
+            "Mod": {"gpib": 6, "harmonic": 1, "phase": -129.01, "gain": 0, "sens": 5e-3, "TC": 10, 
                     "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
         }
@@ -55,8 +55,8 @@ class Main:
         self.lockin_settings = lockin_settings
         
         """Wavetek 50 MHz Function generator, model 80"""
-        self.B0_sweep_period = 1 / (500e-3)                                                     # [s]
-        self.B0_sweep_NPeriods = 300                                                            # Number of periods
+        self.B0_sweep_period = 1 / (300e-3)                                                     # [s]
+        self.B0_sweep_NPeriods = 400                                                            # Number of periods
         self.B0_sweep_times = [(i*self.B0_sweep_period) for i in range(self.B0_sweep_NPeriods)] # Measurement time array while using INTERNAL trigger
         
         """Measurement time with Helmholtz coil modulation"""
@@ -113,7 +113,7 @@ class Main:
             print('Detector type =          ', self.b.detector('CW'))                               # Detector type = CW
             print('Auto exposure =          ', self.b.auto_expo(self.auto_expo))
             print('Calibration method =     ', self.b.calib_method(self.cali_meth))
-            self.b.calib_temp(self.delta_temp)                                                      # Temperature delta = 0.5°C
+            self.b.calib_temp(self.delta_t)
             print('Trigger method =         ', self.b.trigger_method(self.trig_meth))
             if self.trig_meth == 'INT':
                 print('Frame rate =             ', self.b.frame_rate(self.fram_rate), 'Hz\n')

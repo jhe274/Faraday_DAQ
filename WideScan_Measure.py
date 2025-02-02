@@ -20,7 +20,7 @@ bristol_path = os.path.join(K_vapor, 'Bristol_data')
 class Main:
     def __init__(self):
         """Initialize all instruments, including lock-ins, Bristol, TOPTICA DLC pro and experiment settings."""
-        self.NI_channel = 'cDAQ1Mod4'
+        self.NI_channel = 'cDAQ1Mod5'
         self.system = nidaqmx.system.System.local()
         self.device = nidaqmx.system.Device(f'{self.NI_channel}')
         self.system.driver_version
@@ -60,21 +60,21 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 49.11, "gain": 0, "sens": 10e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": -129.16, "gain": 0, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 32768, "interval": 100e-3},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 5},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -165.74, "gain": 0, "sens": 10e-3, "TC": 100e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": -168.74, "gain": 0, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 32768, "interval": 100e-3},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 5},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": -12.50, "gain": 0, "sens": 1, "TC": 100E-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": -177.28, "gain": 0, "sens": 1, "TC": 5, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 32768, "interval": 100e-3},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 5},
 
-            "Mod": {"gpib": 6, "harmonic": 1, "phase": 144.37, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
-                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 0, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 32768, "interval": 100e-3},
+            "Mod": {"gpib": 6, "harmonic": 1, "phase": 144.37, "gain": 0, "sens": 500e-3, "TC": 5, 
+                    "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 5},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
