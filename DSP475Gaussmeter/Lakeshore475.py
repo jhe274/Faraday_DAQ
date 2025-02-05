@@ -1,347 +1,263 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-Provides support for the Lakeshore 475 Gaussmeter.
-"""
+import pyvisa
+import struct
+import time
 
-# IMPORTS #####################################################################
+class LakeShore475:
+    """Class for controlling the LakeShore 475 DSP Gaussmeter via GPIB."""
 
-from __future__ import absolute_import
-from __future__ import division
-
-from builtins import range
-from enum import IntEnum
-
-import quantities as pq
-
-from instruments.generic_scpi import SCPIInstrument
-from instruments.util_fns import assume_units, bool_property
-
-# CONSTANTS ###################################################################
-
-LAKESHORE_FIELD_UNITS = {
-    1: pq.gauss,
-    2: pq.tesla,
-    3: pq.oersted,
-    4: pq.CompoundUnit('A/m')
-}
-
-LAKESHORE_TEMP_UNITS = {
-    1: pq.celsius,
-    2: pq.kelvin
-}
-
-LAKESHORE_FIELD_UNITS_INV = dict((v, k) for k, v in
-                                 LAKESHORE_FIELD_UNITS.items())
-LAKESHORE_TEMP_UNITS_INV = dict((v, k) for k, v in
-                                LAKESHORE_TEMP_UNITS.items())
-
-# CLASSES #####################################################################
-
-
-class Lakeshore475(SCPIInstrument):
-
-    """
-    The Lakeshore475 is a DSP Gaussmeter with field ranges from 35mG to 350kG.
-
-    Example usage:
-
-    >>> import instruments as ik
-    >>> import quantities as pq
-    >>> gm = ik.lakeshore.Lakeshore475.open_gpibusb('/dev/ttyUSB0', 1)
-    >>> print(gm.field)
-    >>> gm.field_units = pq.tesla
-    >>> gm.field_setpoint = 0.05 * pq.tesla
-    """
-
-    # ENUMS ##
-
-    class Mode(IntEnum):
+    def __init__(self, gpib_address: str):
         """
-        Enum containing valid measurement modes for the Lakeshore 475
+        Initialize the GPIB connection to the instrument.
+        :param gpib_address: GPIB address string
         """
-        dc = 1
-        rms = 2
-        peak = 3
+        self.rm = pyvisa.ResourceManager()
+        self.device = self.rm.open_resource(gpib_address)
+        self.dev_addr = gpib_address
+        self.device.timeout = 5000  # Timeout in milliseconds
+        print(f"Connected to: {self.query('*IDN?')}")
 
-    class Filter(IntEnum):
-        """
-        Enum containing valid filter modes for the Lakeshore 475
-        """
-        wide = 1
-        narrow = 2
-        lowpass = 3
+    def write(self, command):
+        """Send a command to the instrument."""
+        self.device.write(command)
 
-    class PeakMode(IntEnum):
-        """
-        Enum containing valid peak modes for the Lakeshore 475
-        """
-        periodic = 1
-        pulse = 2
+    def query(self, command):
+        """Send a query command and return the response."""
+        return self.device.query(command).strip()
+    
+    def clear_interface(self):
+        """Clears the instrument interface."""
+        return self.write("*CLS")
+    
+    def reset(self):
+        """Resets the instrument."""
+        return self.write("*RST")
+    
+    @staticmethod
+    def validate_input(value, valid_values, error_message):
+        """Validates if a value is within allowed values."""
+        if value not in valid_values:
+            raise ValueError(error_message)
 
-    class PeakDisplay(IntEnum):
-        """
-        Enum containing valid peak displays for the Lakeshore 475
-        """
-        positive = 1
-        negative = 2
-        both = 3
-
-    # PROPERTIES ##
-
-    @property
-    def field(self):
-        """
-        Read field from connected probe.
-
-        :type: `~quantities.quantity.Quantity`
-        """
-        return float(self.query('RDGFIELD?')) * self.field_units
-
-    @property
-    def field_units(self):
-        """
-        Gets/sets the units of the Gaussmeter.
-
-        Acceptable units are Gauss, Tesla, Oersted, and Amp/meter.
-
-        :type: `~quantities.unitquantity.UnitQuantity`
-        """
-        value = int(self.query('UNIT?'))
-        return LAKESHORE_FIELD_UNITS[value]
-
-    @field_units.setter
-    def field_units(self, newval):
-        if isinstance(newval, pq.unitquantity.UnitQuantity):
-            if newval in LAKESHORE_FIELD_UNITS_INV:
-                self.sendcmd('UNIT ' + LAKESHORE_FIELD_UNITS_INV[newval])
-            else:
-                raise ValueError('Not an acceptable Python quantities object')
+    def auto(self, value: bool):
+        """Initiates a auto range command."""
+        return self.write(f"AUTO {value}")
+    
+    def get_auto(self):
+        """Gets the current auto range setting."""
+        if self.query("AUTO?") == "1":
+            return "On"
         else:
-            raise TypeError('Field units must be a Python quantity')
+            return "Off"
 
-    @property
-    def temp_units(self):
-        """
-        Gets/sets the temperature units of the Gaussmeter.
+    def read_field(self):
+        """Reads the magnetic field measurement in the currently set units."""
+        return float(self.query("RDGFIELD?"))
 
-        Acceptable units are celcius and kelvin.
+    def get_units(self):
+        """Gets the currently set field measurement units."""
+        units = {
+            "1": "Gauss",
+            "2": "Tesla",
+            "3": "Oersted",
+            "4": "A/m"
+        }
+        return units.get(self.query("UNIT?"), "Unknown")
 
-        :type: `~quantities.unitquantity.UnitQuantity`
-        """
-        value = int(self.query('TUNIT?'))
-        return LAKESHORE_TEMP_UNITS[value]
-
-    @temp_units.setter
-    def temp_units(self, newval):
-        if isinstance(newval, pq.unitquantity.UnitQuantity):
-            if newval in LAKESHORE_TEMP_UNITS_INV:
-                self.sendcmd('TUNIT ' + LAKESHORE_TEMP_UNITS_INV[newval])
-            else:
-                raise TypeError('Not an acceptable Python quantities object')
+    def set_units(self, unit):
+        """Sets the field measurement units."""
+        unit_map = {
+            "Gauss": "1",
+            "Tesla": "2",
+            "Oersted": "3",
+            "A/m": "4"
+        }
+        if unit in unit_map:
+            self.write(f"UNIT {unit_map[unit]}")
         else:
-            raise TypeError('Temperature units must be a Python quantity')
+            raise ValueError("Invalid unit. Choose from: Gauss, Tesla, Oersted, A/m.")
 
-    @property
-    def field_setpoint(self):
-        """
-        Gets/sets the final setpoint of the field control ramp.
+    def get_mode(self):
+        """Gets the current measurement mode (DC, RMS, or Peak)."""
+        modes = {"1": "DC", "2": "RMS", "3": "Peak"}
+        return self.query("RDGMODE?")
 
-        :units: As specified (if a `~quantities.Quantity`) or assumed to be
-            of units Gauss.
-        :type: `~quantities.quantity.Quantity` with units Gauss
-        """
-        value = self.query('CSETP?').strip()
-        units = self.field_units
-        return float(value) * units
+    def set_mode(self, m_mode, resolution, filter, p_mode, p_disp):
+        """Sets the measurement mode (DC, RMS, or Peak)."""
 
-    @field_setpoint.setter
-    def field_setpoint(self, newval):
-        units = self.field_units
-        newval = float(assume_units(newval, pq.gauss).rescale(units).magnitude)
-        self.sendcmd('CSETP {}'.format(newval))
+        # Define valid options as lookup dictionaries
+        measurement_modes = {"DC": "1", "RMS": "2", "Peak": "3"}
+        dc_resolution = {"3 digits": "1", "4 digits": "2", "5 digits": "3"}
+        rms_filter_mode = {"wide band": "1", "narrow band": "2", "low pass": "3"}
+        peak_mode = {"periodic": "1", "pulse": "2"}
+        peak_disp = {"positive": "1", "negative": "2", "both": "3"}
 
-    @property
-    def field_control_params(self):
-        """
-        Gets/sets the parameters associated with the field control ramp.
-        These are (in this order) the P, I, ramp rate, and control slope limit.
+        # Validate all inputs first
+        try:
+            c1 = measurement_modes[m_mode]
+            c2 = dc_resolution[resolution]
+            c3 = rms_filter_mode[filter]
+            c4 = peak_mode[p_mode]
+            c5 = peak_disp[p_disp]
+        except KeyError as e:
+            raise ValueError(f"Invalid input: {e}. Please check your arguments.")
 
-        :type: `tuple` of 2 `float` and 2 `~quantities.quantity.Quantity`
-        """
-        params = self.query('CPARAM?').strip().split(',')
-        params = [float(x) for x in params]
-        params[2] = params[2] * self.field_units / pq.minute
-        params[3] = params[3] * pq.volt / pq.minute
-        return tuple(params)
+        return self.write(f"RDGMODE {c1}{c2}{c3}{c4}{c5}")
 
-    @field_control_params.setter
-    def field_control_params(self, newval):
-        if not isinstance(newval, tuple):
-            raise TypeError('Field control parameters must be specified as '
-                            ' a tuple')
-        newval = list(newval)
-        newval[0] = float(newval[0])
-        newval[1] = float(newval[1])
+    def get_temperature(self):
+        """Reads the probe temperature in Celsius."""
+        return float(self.query("RDGTEMP?"))
 
-        unit = self.field_units / pq.minute
-        newval[2] = float(
-            assume_units(newval[2], unit).rescale(unit).magnitude)
-        unit = pq.volt / pq.minute
-        newval[3] = float(
-            assume_units(newval[3], unit).rescale(unit).magnitude)
-
-        self.sendcmd('CPARAM {},{},{},{}'.format(
-            newval[0],
-            newval[1],
-            newval[2],
-            newval[3],
-        ))
-
-    @property
-    def p_value(self):
-        """
-        Gets/sets the P value for the field control ramp.
-
-        :type: `float`
-        """
-        return self.field_control_params[0]
-
-    @p_value.setter
-    def p_value(self, newval):
-        newval = float(newval)
-        values = list(self.field_control_params)
-        values[0] = newval
-        self.field_control_params = tuple(values)
-
-    @property
-    def i_value(self):
-        """
-        Gets/sets the I value for the field control ramp.
-
-        :type: `float`
-        """
-        return self.field_control_params[1]
-
-    @i_value.setter
-    def i_value(self, newval):
-        newval = float(newval)
-        values = list(self.field_control_params)
-        values[1] = newval
-        self.field_control_params = tuple(values)
-
-    @property
-    def ramp_rate(self):
-        """
-        Gets/sets the ramp rate value for the field control ramp.
-
-        :units: As specified (if a `~quantities.Quantity`) or assumed to be
-            of current field units / minute.
-        :type: `~quantities.quantity.Quantity`
-        """
-        return self.field_control_params[2]
-
-    @ramp_rate.setter
-    def ramp_rate(self, newval):
-        unit = self.field_units / pq.minute
-        newval = float(assume_units(newval, unit).rescale(unit).magnitude)
-        values = list(self.field_control_params)
-        values[2] = newval
-        self.field_control_params = tuple(values)
-
-    @property
-    def control_slope_limit(self):
-        """
-        Gets/sets the I value for the field control ramp.
-
-        :units: As specified (if a `~quantities.Quantity`) or assumed to be
-            of units volt / minute.
-        :type: `~quantities.quantity.Quantity`
-        """
-        return self.field_control_params[3]
-
-    @control_slope_limit.setter
-    def control_slope_limit(self, newval):
-        unit = pq.volt / pq.minute
-        newval = float(assume_units(newval, unit).rescale(unit).magnitude)
-        values = list(self.field_control_params)
-        values[3] = newval
-        self.field_control_params = tuple(values)
-
-    control_mode = bool_property(
-        command="CMODE",
-        inst_true="1",
-        inst_false="0",
-        doc="""
-        Gets/sets the control mode setting. False corresponds to the field
-        control ramp being disables, while True enables the closed loop PI
-        field control.
-
-        :type: `bool`
-        """
-    )
-
-    # METHODS ##
-
-    # pylint: disable=too-many-arguments
-    def change_measurement_mode(self, mode, resolution, filter_type,
-                                peak_mode, peak_disp):
-        """
-        Change the measurement mode of the Gaussmeter.
-
-        :param mode: The desired measurement mode.
-        :type mode: `Lakeshore475.Mode`
-
-        :param `int` resolution: Digit resolution of the measured field. One of
-            `{3|4|5}`.
-
-        :param filter_type: Specify the signal filter
-            used by the instrument. Available types include wide band, narrow
-            band, and low pass.
-        :type filter_type: `Lakeshore475.Filter`
-
-        :param peak_mode: Peak measurement mode to be
-            used.
-        :type peak_mode: `Lakeshore475.PeakMode`
-
-        :param peak_disp: Peak display mode to be
-            used.
-        :type peak_disp: `Lakeshore475.PeakDisplay`
-        """
-        if not isinstance(mode, Lakeshore475.Mode):
-            raise TypeError("Mode setting must be a "
-                            "`Lakeshore475.Mode` value, got {} "
-                            "instead.".format(type(mode)))
-        if not isinstance(resolution, int):
-            raise TypeError('Parameter "resolution" must be an integer.')
-        if not isinstance(filter_type, Lakeshore475.Filter):
-            raise TypeError("Filter type setting must be a "
-                            "`Lakeshore475.Filter` value, got {} "
-                            "instead.".format(type(filter_type)))
-        if not isinstance(peak_mode, Lakeshore475.PeakMode):
-            raise TypeError("Filter type setting must be a "
-                            "`Lakeshore475.PeakMode` value, got {} "
-                            "instead.".format(type(peak_mode)))
-        if not isinstance(peak_disp, Lakeshore475.PeakDisplay):
-            raise TypeError("Filter type setting must be a "
-                            "`Lakeshore475.PeakDisplay` value, got {} "
-                            "instead.".format(type(peak_disp)))
-
-        mode = mode.value
-        filter_type = filter_type.value
-        peak_mode = peak_mode.value
-        peak_disp = peak_disp.value
-
-        # Parse the resolution
-        if resolution in range(3, 6):
-            resolution -= 2
+    def set_temperature_units(self, unit):
+        """Sets the temperature measurement units."""
+        temp_units = {"Celsius": "1", "Kelvin": "2"}
+        if unit in temp_units:
+            self.write(f"TUNIT {temp_units[unit]}")
         else:
-            raise ValueError('Only 3,4,5 are valid resolutions.')
+            raise ValueError("Invalid unit. Choose from: Celsius, Kelvin.")
+    
+    def field_control_mode(self, mode: bool):
+        """Enables or disables field control mode."""
+        return self.write(f"CMODE {mode}")
+    
+    def get_field_control_mode(self):
+        """Gets the current field control mode."""
+        if self.query("CMODE?") == "1":
+            return "Closed Loop PI"
+        elif self.query("CMODE?") == "0":
+            return "Off"
 
-        self.sendcmd('RDGMODE {},{},{},{},{}'.format(
-            mode,
-            resolution,
-            filter_type,
-            peak_mode,
-            peak_disp
-        ))
+    def get_setpoint(self):
+        """Gets the current setpoint for field control."""
+        return float(self.query("CSETP?"))
+
+    def set_setpoint(self, value):
+        """Sets the field setpoint."""
+        self.write(f"CSETP {value}")
+
+    def get_control_params(self):
+        """Gets the control parameters (P, I, ramp rate, control slope limit)."""
+        response = self.query("CPARAM?").split(',')
+        return {
+            "P": float(response[0]),
+            "I": float(response[1]),
+            "Ramp Rate": float(response[2]),
+            "Control Slope Limit": float(response[3])
+        }
+
+    def set_control_params(self, p, i, ramp_rate, slope_limit):
+        """Sets the control parameters (P, I, ramp rate, control slope limit)."""
+        self.write(f"CPARAM {p},{i},{ramp_rate},{slope_limit}")
+
+    def logging_rate(self):
+        """Returns the data logging rate."""
+        return self.query("DLOGSET?")
+
+    def set_logging_rate(self, rate):
+        """
+        Sets the data logging rate.
+        Valid rates: {1, 10, 30, 100, 200, 400, 800, 1000} readings per second.
+        """
+        rate_map = {1: 1, 10: 2, 30: 3, 100: 4, 200: 5, 400: 6, 800: 7, 1000: 8}
+        if rate in rate_map:
+            self.write(f"DLOGSET {rate_map[rate]}")
+        else:
+            raise ValueError("Invalid rate. Choose from {1, 10, 30, 100, 200, 400, 800, 1000} Hz.")
+
+    def flush_buffer(self):
+        """Flushes the data logging buffer."""
+        return self.write("TRIG")
+    
+    def data_log(self, value: bool):
+        """
+        Data logging command.
+        0 =  stop, 1 = start.
+        """
+        if value == 1:
+            return self.write(f"DLOG {value}")
+        elif value == 0:
+            return self.write(f"DLOG {value}")
+
+    def data_log_num_points(self):
+        """Returns the number of data points stored in the Datalog buffer."""
+        return self.query("DLOGNUM?")
+    
+    def get_log_data(self, num_points=10):
+        """
+        Retrieves stored data from the buffer.
+        :param num_points: Number of data points to read (max 1024).
+        """
+        data = []
+        for i in range(1, num_points + 1):
+            try:
+                reading = float(self.query(f"DLOGRDG? {i}"))
+                data.append(reading)
+            except Exception as e:
+                print(f"Error reading point {i}: {e}")
+        return data
+
+    def read_fast_data(self, num_readings):
+        """
+        Reads high-speed binary data using RDGFAST? command.
+        Returns a list of field readings.
+        """
+        self.device.write(f"RDGFAST? {num_readings}")
+        time.sleep(0.05)  # Ensure the data is received fully
+        raw_data = self.device.read_raw()
+
+        print(f"Raw Binary Data: {raw_data.hex()}")  # Debugging: Print raw binary response
+
+        # Correct header size (from debug, seems to be 2 bytes)
+        header_size = 2  
+        num_bytes = len(raw_data) - header_size
+        num_floats = num_bytes // 4  # Each reading is a 4-byte IEEE-754 float
+
+        print(f"Total Bytes Received: {len(raw_data)}, Expected Readings: {num_readings}, Parsed Floats: {num_floats}")
+
+        if num_floats != num_readings:
+            print(f"Warning: Expected {num_readings} readings, but got {num_floats}")
+
+        readings = []
+        for i in range(num_floats):
+            start_idx = header_size + (i * 4)
+            end_idx = start_idx + 4
+            float_bytes = raw_data[start_idx:end_idx]
+
+            # Debug: Print extracted bytes for verification
+            print(f"Reading {i}: {float_bytes.hex()}")
+
+            # Try both big-endian and little-endian and see which works
+            try:
+                reading = struct.unpack(">f", float_bytes)[0]  # Big-endian IEEE-754
+            except struct.error:
+                reading = struct.unpack("<f", float_bytes)[0]  # Little-endian if big-endian fails
+
+            readings.append(reading)
+
+        print(f"Parsed Readings: {readings}")  # Debugging: Print extracted readings
+        return readings
+
+    def get_trigger(self):
+        """Gets the current trigger out state."""
+        return self.query("TRIG?")
+    
+    def trigger(self, value):
+        """
+        Hardware trigger out command.
+        0 = Off, 1 = On.
+        """
+        if value == 1:
+            return self.write(f"TRIG {value}")
+        elif value == 0:
+            return self.write(f"TRIG {value}")
+    
+    def __del__(self):
+        """Ensures the connection is closed when the object is deleted."""
+        try:
+            self.device.close()
+            print(f"Connection to {self.dev_addr} closed.")
+        except Exception as e:
+            print(f"Error closing connection: {e}")
+
+if __name__ == "__main__":
+    ls475 = LakeShore475()
+    # LakeShore475(gpib_address="GPIB1::XX::INSTR") # Replace XX with the actual GPIB address of the instrument
