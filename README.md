@@ -6,7 +6,7 @@ This repository provides a **comprehensive and modular control system** for cond
 - **Signal Recovery DSP 7265 Lock-in Amplifiers** (using `pymeasure.instruments.signalrecovery.DSP7265`)
 - **TOPTICA DLC Pro Tunable Diode Laser**
 - **National Instruments cDAQ-9172 Data Acquisition System**
-- **Lakeshore 475 Gaussmeter**
+- **Lakeshore DSP 475 Gaussmeter**
 - **Thorlabs TC300 Temperature Controller**
 
 The code is structured to facilitate **expandability**, allowing users to integrate additional devices and measurement routines as needed.
@@ -27,6 +27,10 @@ The code is structured to facilitate **expandability**, allowing users to integr
 │   ├── Bristol_871A.py        # Full Python driver for Bristol 871A Wavelength Meter
 │   ├── __init__.py            # Module initialization
 │
+├── 📂 LakeshoreDSP475Gaussmeter/
+│   ├── Lakeshore475.py        # Full Python driver for Lakeshore DSP 475 Gaussmeter
+│   ├── __init__.py            # Module initialization
+│
 ├── 📂 pymeasure/
 ├──── 📂 instruments/
 ├────── 📂 signalrecovery/
@@ -38,10 +42,10 @@ The code is structured to facilitate **expandability**, allowing users to integr
 │   ├── Laser.py               # Control script for TOPTICA DLC Pro Tunable Diode Laser
 │   ├── __init__.py            # Module initialization
 │
-├── 📂 instruments/
-│   ├── lakeshore.py           # Control script for Lakeshore 475 Gaussmeter
+├── 📂 Thorlabs/
 │   ├── TC300_COMMAND_LIB.py   # Control script for Thorlabs TC300 Temperature Controller
 │
+├── DSP475Gaussmeter_test.py   # Test ccript for communications with DSP 475 Gaussmeter via GPIB
 ├── WideScan_Measure.py        # Script for wide-scan Faraday rotation measurements
 ├── LockedLaser_Measure.py     # Script for locked-laser Faraday rotation measurements
 ├── README.md                  # This file
@@ -100,6 +104,11 @@ These scripts are optimized for:
 - Supports **Telnet and Serial communication**.
 - Handles **buffer retrieval, calibration, and data logging**.
 
+### 🧲 **Lakeshore DSP 475 Gaussmeter**
+- A **comprehensive Python control package** for the Lakeshore DSP 475 Gaussmeter.
+- Supports **GPIB communication**.
+- Handles **device confifuration, and data logging**.
+
 ### 🎛 **Signal Recovery DSP 7265 Lock-in Amplifiers**
 - Uses **`pymeasure.instruments.signalrecovery.DSP7265`**.
 - Allows **harmonic, phase, and sensitivity settings**.
@@ -121,7 +130,7 @@ Data is **automatically saved** in organized directories under `Faraday rotation
 ```plaintext
 📂 PME_measurements/
 ├── 📂 Vapor_cell/
-│   ├── 📂 Holding_field_data/
+│   ├── 📂 Magnetic_field_data/
 │   │   ├── 📂 XX-XX-20XX
 │   │       ├── Gaussmeter_20XX-XX-XX.csv
 │   │
