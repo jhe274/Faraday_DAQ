@@ -85,7 +85,7 @@ def test_lakeshore_475():
         # Testing high-speed binary output
         """
         The returned results is repetitive and not refreshing,
-        the instrument seemed to be freezed after the command was sent.
+        the instrument seemed to be frozen after the command was sent.
         """
         # print("\n=== Testing High-Speed Binary Data Retrieval ===")
         # fast_data = gaussmeter.read_fast_data(num_readings=10)
