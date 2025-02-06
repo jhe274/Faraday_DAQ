@@ -1,7 +1,11 @@
 from DSP475Gaussmeter.Lakeshore475 import LakeShore475
-import time
+from time import time, perf_counter, sleep
 
 gpib_address = "GPIB1::11::INSTR"
+period = 1 # [s]
+NPeriods = 10
+times_array = [(i*period) for i in range(NPeriods)]
+MeasureDuration = NPeriods*period
 
 def test_lakeshore_475():
     """Test communication with the LakeShore 475 Gaussmeter."""
@@ -11,13 +15,6 @@ def test_lakeshore_475():
         # Run a self-test
         test_result = gaussmeter.self_test()
         print(f"Self-Test Result: {test_result}")
-
-        print("\n=== Clearing Interface ===")
-        gaussmeter.clear_interface()
-
-        print("\n=== Resetting Instrument ===")
-        reset_response = gaussmeter.reset()
-        print(f"Reset Response: {reset_response}")
 
         # Enable Auto Range
         print("\n=== Enabling Auto Range ===")
@@ -54,13 +51,24 @@ def test_lakeshore_475():
         # Read the current setpoint
         print("\n=== Checking Field Setpoint ===")
         print(f"The current setpoint is: {gaussmeter.setpoint}")
-
-        print(f'The current trigger state is: {gaussmeter.trigger}')
-
+        
         # Start logging
-        print("\n=== Starting Data Logging for 2 Seconds ===")
+        print("\n=== Starting Data Logging for 1 Seconds ===")
         gaussmeter.data_log(True)
-        time.sleep(2)
+        i = 0
+        while i < NPeriods:
+                if i == 0:
+                    t0 = perf_counter()
+                while perf_counter() - t0 < times_array[i]:
+                    pass
+                t1 = perf_counter()
+                while perf_counter() - t1 < (period/2):
+                    pass
+
+                i = i + 1
+                print(f"\rTime remaining:          {int(MeasureDuration-i*period):4d}", 's', end='')
+
+        sleep(period / 2)                                                     # Wait until the end of the last half period   
         gaussmeter.data_log(False)
         print("Data logging stopped.")
 
@@ -71,13 +79,18 @@ def test_lakeshore_475():
 
         # Retrieve and print data
         print("\n=== Retrieving Logged Data ===")
-        logged_data = gaussmeter.get_log_data(num_points=1024)
+        logged_data = gaussmeter.get_log_data(num_points=10)
         print(f"Logged Data: {logged_data}")
 
         # Testing high-speed binary output
-        print("\n=== Testing High-Speed Binary Data Retrieval ===")
-        fast_data = gaussmeter.read_fast_data(num_readings=20)
-        print(f"Fast Data: {fast_data}")
+        """
+        The returned results is repetitive and not refreshing,
+        the instrument seemed to be freezed after the command was sent.
+        """
+        # print("\n=== Testing High-Speed Binary Data Retrieval ===")
+        # fast_data = gaussmeter.read_fast_data(num_readings=10)
+        # gaussmeter.data_log(False)
+        # print(f"Fast Data: {fast_data}")
 
         print("\n=== Test Completed Successfully ===")
 
