@@ -2,6 +2,16 @@ import pyvisa
 import struct
 import time
 
+# External Dictionary Mappings
+MEASUREMENT_MODES = {"DC": "1", "RMS": "2", "Peak": "3"}
+DC_RESOLUTION = {"3 digits": "1", "4 digits": "2", "5 digits": "3"}
+RMS_FILTER_MODE = {"wide band": "1", "narrow band": "2", "low pass": "3"}
+PEAK_MODE = {"periodic": "1", "pulse": "2"}
+PEAK_DISPLAY = {"positive": "1", "negative": "2", "both": "3"}
+FIELD_UNITS = {"1": "Gauss", "2": "Tesla", "3": "Oersted", "4": "A/m"}
+TEMP_UNITS = {"1": "Celsius", "2": "Kelvin"}
+LOGGING_RATES = {"1": 1, "2": 10, "3": 30, "4": 100, "5": 200, "6": 400, "7": 800, "8": 1000}
+
 class LakeShore475:
     """Class for controlling the LakeShore 475 DSP Gaussmeter via GPIB."""
 
@@ -12,249 +22,196 @@ class LakeShore475:
         """
         self.rm = pyvisa.ResourceManager()
         self.device = self.rm.open_resource(gpib_address)
-        self.dev_addr = gpib_address
         self.device.timeout = 5000  # Timeout in milliseconds
         print(f"Connected to: {self.query('*IDN?')}")
 
-    def write(self, command):
+    def self_test(self):
+        """Runs a self-test query and returns the result."""
+        response = self.query("*TST?")
+        return "No errors found" if response == "0" else "Errors detected"
+
+    def write(self, command: str):
         """Send a command to the instrument."""
         self.device.write(command)
 
-    def query(self, command):
+    def query(self, command: str):
         """Send a query command and return the response."""
         return self.device.query(command).strip()
-    
+
     def clear_interface(self):
         """Clears the instrument interface."""
-        return self.write("*CLS")
-    
+        self.write("*CLS")
+
     def reset(self):
-        """Resets the instrument."""
-        return self.write("*RST")
-    
+        """Resets the instrument and verifies it has restarted."""
+        self.write("*RST")
+        time.sleep(1)  # Allow time for reset
+        return self.query("*IDN?")  # Verify reset
+
     @staticmethod
-    def validate_input(value, valid_values, error_message):
-        """Validates if a value is within allowed values."""
-        if value not in valid_values:
+    def validate_input(value, valid_dict, error_message):
+        """Validates if a value is in the allowed dictionary."""
+        if value not in valid_dict:
             raise ValueError(error_message)
 
-    def auto(self, value: bool):
-        """Initiates a auto range command."""
-        return self.write(f"AUTO {value}")
-    
-    def get_auto(self):
+    @property
+    def auto(self):
         """Gets the current auto range setting."""
-        if self.query("AUTO?") == "1":
-            return "On"
-        else:
-            return "Off"
+        return "On" if self.query("AUTO?") == "1" else "Off"
 
-    def read_field(self):
+    @auto.setter
+    def auto(self, value: bool):
+        """Sets auto range."""
+        self.write(f"AUTO {int(value)}")
+
+    @property
+    def field(self):
         """Reads the magnetic field measurement in the currently set units."""
         return float(self.query("RDGFIELD?"))
 
-    def get_units(self):
+    @property
+    def units(self):
         """Gets the currently set field measurement units."""
-        units = {
-            "1": "Gauss",
-            "2": "Tesla",
-            "3": "Oersted",
-            "4": "A/m"
-        }
-        return units.get(self.query("UNIT?"), "Unknown")
+        unit_code = self.query("UNIT?")
+        return FIELD_UNITS.get(unit_code, "Unknown")
 
-    def set_units(self, unit):
+    @units.setter
+    def units(self, unit: str):
         """Sets the field measurement units."""
-        unit_map = {
-            "Gauss": "1",
-            "Tesla": "2",
-            "Oersted": "3",
-            "A/m": "4"
-        }
-        if unit in unit_map:
-            self.write(f"UNIT {unit_map[unit]}")
-        else:
-            raise ValueError("Invalid unit. Choose from: Gauss, Tesla, Oersted, A/m.")
+        self.validate_input(unit, FIELD_UNITS.values(), "Invalid unit. Choose from: Gauss, Tesla, Oersted, A/m.")
+        self.write(f"UNIT {list(FIELD_UNITS.keys())[list(FIELD_UNITS.values()).index(unit)]}")
 
-    def get_mode(self):
-        """Gets the current measurement mode (DC, RMS, or Peak)."""
-        modes = {"1": "DC", "2": "RMS", "3": "Peak"}
+    @property
+    def mode(self):
+        """Gets the current measurement mode."""
         return self.query("RDGMODE?")
 
     def set_mode(self, m_mode, resolution, filter, p_mode, p_disp):
-        """Sets the measurement mode (DC, RMS, or Peak)."""
+        """Sets the measurement mode."""
+        mode_settings = {
+            "m_mode": (m_mode, MEASUREMENT_MODES),
+            "resolution": (resolution, DC_RESOLUTION),
+            "filter": (filter, RMS_FILTER_MODE),
+            "p_mode": (p_mode, PEAK_MODE),
+            "p_disp": (p_disp, PEAK_DISPLAY),
+        }
 
-        # Define valid options as lookup dictionaries
-        measurement_modes = {"DC": "1", "RMS": "2", "Peak": "3"}
-        dc_resolution = {"3 digits": "1", "4 digits": "2", "5 digits": "3"}
-        rms_filter_mode = {"wide band": "1", "narrow band": "2", "low pass": "3"}
-        peak_mode = {"periodic": "1", "pulse": "2"}
-        peak_disp = {"positive": "1", "negative": "2", "both": "3"}
-
-        # Validate all inputs first
         try:
-            c1 = measurement_modes[m_mode]
-            c2 = dc_resolution[resolution]
-            c3 = rms_filter_mode[filter]
-            c4 = peak_mode[p_mode]
-            c5 = peak_disp[p_disp]
+            cmd_values = "".join(value_dict[value] for value, value_dict in mode_settings.values())
         except KeyError as e:
             raise ValueError(f"Invalid input: {e}. Please check your arguments.")
 
-        return self.write(f"RDGMODE {c1}{c2}{c3}{c4}{c5}")
+        self.write(f"RDGMODE {cmd_values}")
 
-    def get_temperature(self):
+    @property
+    def temperature_units(self):
+        """Gets the temperature measurement unit (Celsius or Kelvin)."""
+        temp_units = {"1": "Celsius", "2": "Kelvin"}
+        return temp_units.get(self.query("TUNIT?"), "Unknown")
+
+    @temperature_units.setter
+    def temperature_units(self, unit: str):
+        """Sets the temperature measurement unit."""
+        self.validate_input(unit, TEMP_UNITS.values(), "Invalid temperature unit. Choose from: Celsius, Kelvin.")
+        self.write(f"TUNIT {list(TEMP_UNITS.keys())[list(TEMP_UNITS.values()).index(unit)]}")
+
+    @property
+    def temperature(self):
         """Reads the probe temperature in Celsius."""
         return float(self.query("RDGTEMP?"))
 
-    def set_temperature_units(self, unit):
-        """Sets the temperature measurement units."""
-        temp_units = {"Celsius": "1", "Kelvin": "2"}
-        if unit in temp_units:
-            self.write(f"TUNIT {temp_units[unit]}")
-        else:
-            raise ValueError("Invalid unit. Choose from: Celsius, Kelvin.")
-    
-    def field_control_mode(self, mode: bool):
-        """Enables or disables field control mode."""
-        return self.write(f"CMODE {mode}")
-    
-    def get_field_control_mode(self):
+    @property
+    def field_control_mode(self):
         """Gets the current field control mode."""
-        if self.query("CMODE?") == "1":
-            return "Closed Loop PI"
-        elif self.query("CMODE?") == "0":
-            return "Off"
+        return "Closed Loop PI" if self.query("CMODE?") == "1" else "Off"
 
-    def get_setpoint(self):
+    @field_control_mode.setter
+    def field_control_mode(self, mode: bool):
+        """Sets field control mode."""
+        self.write(f"CMODE {int(mode)}")
+
+    @property
+    def setpoint(self):
         """Gets the current setpoint for field control."""
         return float(self.query("CSETP?"))
 
-    def set_setpoint(self, value):
+    @setpoint.setter
+    def setpoint(self, value):
         """Sets the field setpoint."""
         self.write(f"CSETP {value}")
 
-    def get_control_params(self):
-        """Gets the control parameters (P, I, ramp rate, control slope limit)."""
+    @property
+    def control_params(self):
+        """Gets the control parameters."""
         response = self.query("CPARAM?").split(',')
-        return {
-            "P": float(response[0]),
-            "I": float(response[1]),
-            "Ramp Rate": float(response[2]),
-            "Control Slope Limit": float(response[3])
-        }
+        return {"P": float(response[0]), "I": float(response[1]), "Ramp Rate": float(response[2]), "Control Slope Limit": float(response[3])}
 
     def set_control_params(self, p, i, ramp_rate, slope_limit):
-        """Sets the control parameters (P, I, ramp rate, control slope limit)."""
+        """Sets the control parameters."""
         self.write(f"CPARAM {p},{i},{ramp_rate},{slope_limit}")
 
+    @property
     def logging_rate(self):
-        """Returns the data logging rate."""
-        return self.query("DLOGSET?")
+        """Returns the data logging rate in Hz."""
+        response = self.query("DLOGSET?")
+        return LOGGING_RATES.get(response, "Unknown")
 
-    def set_logging_rate(self, rate):
-        """
-        Sets the data logging rate.
-        Valid rates: {1, 10, 30, 100, 200, 400, 800, 1000} readings per second.
-        """
-        rate_map = {1: 1, 10: 2, 30: 3, 100: 4, 200: 5, 400: 6, 800: 7, 1000: 8}
-        if rate in rate_map:
-            self.write(f"DLOGSET {rate_map[rate]}")
-        else:
-            raise ValueError("Invalid rate. Choose from {1, 10, 30, 100, 200, 400, 800, 1000} Hz.")
+    @logging_rate.setter
+    def logging_rate(self, rate):
+        """Sets the data logging rate."""
+        self.validate_input(rate, LOGGING_RATES.values(), "Invalid rate. Choose from valid rates.")
+        self.write(f"DLOGSET {list(LOGGING_RATES.keys())[list(LOGGING_RATES.values()).index(rate)]}")
 
-    def flush_buffer(self):
-        """Flushes the data logging buffer."""
-        return self.write("TRIG")
-    
+    def trigger_event(self):
+        """
+        Trigger event.
+        Starts the datalog capture mode. This command is equivalent in operation to the DLOG command.
+        """
+        self.write("*TRG")
+
     def data_log(self, value: bool):
-        """
-        Data logging command.
-        0 =  stop, 1 = start.
-        """
-        if value == 1:
-            return self.write(f"DLOG {value}")
-        elif value == 0:
-            return self.write(f"DLOG {value}")
+        """Starts or stops data logging."""
+        self.write(f"DLOG {int(value)}")
 
     def data_log_num_points(self):
         """Returns the number of data points stored in the Datalog buffer."""
-        return self.query("DLOGNUM?")
-    
-    def get_log_data(self, num_points=10):
-        """
-        Retrieves stored data from the buffer.
-        :param num_points: Number of data points to read (max 1024).
-        """
-        data = []
-        for i in range(1, num_points + 1):
-            try:
-                reading = float(self.query(f"DLOGRDG? {i}"))
-                data.append(reading)
-            except Exception as e:
-                print(f"Error reading point {i}: {e}")
-        return data
+        return int(self.query("DLOGNUM?"))
+
+    def get_log_data(self, num_points: int):
+        """Retrieves stored data from the buffer."""
+        return [float(self.query(f"DLOGRDG? {i}")) for i in range(1, num_points + 1)]
 
     def read_fast_data(self, num_readings):
-        """
-        Reads high-speed binary data using RDGFAST? command.
-        Returns a list of field readings.
-        """
+        """Reads high-speed binary data using RDGFAST? command."""
         self.device.write(f"RDGFAST? {num_readings}")
-        time.sleep(0.05)  # Ensure the data is received fully
         raw_data = self.device.read_raw()
 
-        print(f"Raw Binary Data: {raw_data.hex()}")  # Debugging: Print raw binary response
+        print(f"Raw Binary Data: {raw_data.hex()}")  # Debugging output
 
-        # Correct header size (from debug, seems to be 2 bytes)
         header_size = 2  
         num_bytes = len(raw_data) - header_size
-        num_floats = num_bytes // 4  # Each reading is a 4-byte IEEE-754 float
-
-        print(f"Total Bytes Received: {len(raw_data)}, Expected Readings: {num_readings}, Parsed Floats: {num_floats}")
+        num_floats = num_bytes // 4  
 
         if num_floats != num_readings:
             print(f"Warning: Expected {num_readings} readings, but got {num_floats}")
 
-        readings = []
-        for i in range(num_floats):
-            start_idx = header_size + (i * 4)
-            end_idx = start_idx + 4
-            float_bytes = raw_data[start_idx:end_idx]
-
-            # Debug: Print extracted bytes for verification
-            print(f"Reading {i}: {float_bytes.hex()}")
-
-            # Try both big-endian and little-endian and see which works
-            try:
-                reading = struct.unpack(">f", float_bytes)[0]  # Big-endian IEEE-754
-            except struct.error:
-                reading = struct.unpack("<f", float_bytes)[0]  # Little-endian if big-endian fails
-
-            readings.append(reading)
-
-        print(f"Parsed Readings: {readings}")  # Debugging: Print extracted readings
-        return readings
-
-    def get_trigger(self):
+        return [struct.unpack(">f", raw_data[header_size + (i * 4):header_size + (i + 1) * 4])[0] for i in range(num_floats)]
+    
+    @property
+    def trigger(self):
         """Gets the current trigger out state."""
-        return self.query("TRIG?")
-    
-    def trigger(self, value):
-        """
-        Hardware trigger out command.
-        0 = Off, 1 = On.
-        """
-        if value == 1:
-            return self.write(f"TRIG {value}")
-        elif value == 0:
-            return self.write(f"TRIG {value}")
-    
+        return "On" if self.query("TRIG?") == "1" else "Off"
+
+    @trigger.setter
+    def trigger(self, value: bool):
+        """Specifies hardware trigger off or on."""
+        self.write(f"TRIG {int(value)}")
+
     def __del__(self):
         """Ensures the connection is closed when the object is deleted."""
         try:
             self.device.close()
-            print(f"Connection to {self.dev_addr} closed.")
+            print(f"Connection closed.")
         except Exception as e:
             print(f"Error closing connection: {e}")
 
