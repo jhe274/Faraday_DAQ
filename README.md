@@ -130,11 +130,11 @@ Data is **automatically saved** in organized directories under `Faraday rotation
 ```plaintext
 📂 PME_measurements/
 ├── 📂 Vapor_cell/
-│   ├── 📂 Magnetic_field_data/
+│   ├── 📂 Gaussmeter_data/
 │   │   ├── 📂 XX-XX-20XX
 │   │       ├── Gaussmeter_20XX-XX-XX.csv
 │   │
-│   ├── 📂 Bristol_data/
+│   ├── 📂 Wavelegnthmeter_data/
 │   │   ├── 📂 XX-XX-20XX
 │   │       ├── Bristol_20XX-XX-XX.csv
 │   │

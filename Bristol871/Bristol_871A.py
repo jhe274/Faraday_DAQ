@@ -319,7 +319,7 @@ class Bristol871(object):
 
         return self.query(':SENS:CALI:TEMP?')
 
-    def calib_timer(self, value: float):
+    def calibration_timer(self, value: float):
         """
         Sets/Queries the time between automatic calibrations of the instrument. The time
         is specified in minutes.

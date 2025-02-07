@@ -15,7 +15,7 @@ K_vapor = os.path.join(dir_path, 'K_vapor_cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
 DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro_data')
 lockin_path = os.path.join(K_vapor, 'Lockins_data')
-bristol_path = os.path.join(K_vapor, 'Bristol_data')
+wavelengthmeter_path = os.path.join(K_vapor, 'Wavelengthmeter_data')
 
 class Main:
     def __init__(self):
@@ -129,9 +129,9 @@ class Main:
         try:
             self.b = Bristol871(self.port_Bristol)
             print('Detector type =          ', self.b.detector('CW'))                           # Detector type = CW
-            print('Auto exposure =          ', self.b.auto_expo(self.auto_expo))
-            print('Calibration method =     ', self.b.calib_method(self.cali_meth))
-            self.b.calib_temp(self.delta_temp)                                                  # Temperature delta = 0.5°C
+            print('Auto exposure =          ', self.b.auto_exposure(self.auto_expo))
+            print('Calibration method =     ', self.b.calibration_method(self.cali_meth))
+            self.b.calibration_temp(self.delta_temp)                                                  # Temperature delta = 0.5°C
             print('Trigger method =         ', self.b.trigger_method(self.trig_meth))
             if self.trig_meth == 'INT':
                 print('Frame rate =             ', self.b.frame_rate(self.fram_rate), 'Hz\n')
@@ -140,7 +140,7 @@ class Main:
                 # print('Average count =          ', self.b.average_count(self.aver_coun))
             else:
                 print('Frame rate =             ', round(1/self.EXT_peri), 'Hz\n')
-            self.b.calib()                                                                      # Calibrate Bristol before the measurement
+            self.b.calibrate()                                                                      # Calibrate Bristol before the measurement
             print('Bristol wavelength meter successfully configured!\n')
         except Exception as e:
             print('Bristol871 wavelength meter not found: {}\n'.format(e))
@@ -210,7 +210,7 @@ class Main:
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n=============== Wide Scan Initiated ===============")
-                    self.b.buffer('OPEN')
+                    self.b.buffer_control('OPEN')
                     while i < self.EXT_NPeri:
                         if i == 0:
                             t0 = perf_counter()
@@ -228,7 +228,7 @@ class Main:
                     sleep(self.EXT_L)
                     for lockin in self.lockins.values():
                         lockin.halt_buffer()
-                    self.b.buffer('CLOS')
+                    self.b.buffer_control('CLOS')
                     elap_time = perf_counter() - t0
                     task.write(self.triple_fall)
                     print("=============== Wide Scan Completed ===============")
@@ -263,7 +263,7 @@ class Main:
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n=============== Wide Scan Initiated ===============")
-                    self.b.buffer('OPEN')                                                       # Essentially a gated open buffer command
+                    self.b.buffer_control('OPEN')                                                       # Essentially a gated open buffer command
                     start_time = time()
                     task.write(self.double_rise)
                     while i < self.INT_NPeri:
@@ -278,7 +278,7 @@ class Main:
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.INT_peri):4d}", 's', end='')
                     for lockin in self.lockins.values():
                         lockin.halt_buffer()
-                    self.b.buffer('CLOS')
+                    self.b.buffer_control('CLOS')
                     elap_time = perf_counter() - t0
                     task.write(self.double_fall)
                     print("\n=============== Wide Scan Completed ===============")
@@ -314,7 +314,7 @@ class Main:
         else:
             start_time, elap_time, timestamps = self.EXT_trig_measure()
 
-        self.b.get_buffer(bristol_path, f"Bristol_{dt.now().strftime('%Y-%m-%d')}.csv", elap_time, timestamps)
+        self.b.get_buffer(wavelengthmeter_path, f"Bristol_{dt.now().strftime('%Y-%m-%d')}.csv", elap_time, timestamps)
         self.get_lock_in_buffer(lockin_path, f"Faraday_lockins_{dt.now().strftime('%Y-%m-%d')}.lvm", start_time)
 
     def get_lock_in_buffer(self, path, filename, t0):
