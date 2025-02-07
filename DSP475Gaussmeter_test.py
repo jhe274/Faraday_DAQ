@@ -1,5 +1,7 @@
-from DSP475Gaussmeter.Lakeshore475 import LakeShore475
+from LakeshoreDSP475Gaussmeter.Lakeshore475 import LakeShore475
 from time import time, perf_counter, sleep
+import os, datetime
+import struct
 
 gpib_address = "GPIB1::11::INSTR"
 period = 1 # [s]
@@ -96,6 +98,51 @@ def test_lakeshore_475():
 
     except Exception as e:
         print(f"Test failed: {e}")
+
+    def get_readings(self, path: str, filename: str, acq_time: float, timestamps: list):
+        """
+        Retrieves buffered data from the instrument and saves it as a CSV file.
+        """
+        self.buffer('CLOS')
+        self.buffer('DATA?')
+        print('\nRetrieving data from Bristol buffer...')
+        print('Getting first character:', self.tn.rawq_getchar())
+
+        # Extract the total number of bytes in the buffer
+        num_bytes_char = int(self.tn.rawq_getchar())
+        total_bytes = sum(int(self.tn.rawq_getchar()) * 10 ** (num_bytes_char - i - 1) for i in range(num_bytes_char))
+
+        print("Total bytes:", total_bytes)
+        num_samples = total_bytes // 20
+        print("Number of Samples:", num_samples)
+        print("Total time elapsed:", acq_time)
+        print("Sample Rate:", num_samples / acq_time)
+
+        # Generate file path with unique naming
+        folder_name = datetime.datetime.now().strftime("%m-%d-%Y")
+        folder_path = os.path.join(path, folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+
+        counter = 1
+        original_filename = filename
+        while os.path.isfile(os.path.join(folder_path, filename)):
+            filename = f"{original_filename.split('.')[0]}_{counter}.csv"
+            counter += 1
+
+        file_path = os.path.join(folder_path, filename)
+
+        # Retrieve and save data
+        try:
+            with open(file_path, "w") as log:
+                log.write("Timestamp,Status,Wavelength,Intensity\n")
+                for timestamp in timestamps:
+                    raw_data = b"".join(self.tn.rawq_getchar() for _ in range(20))
+                    wvl, pwr, status, _ = struct.unpack("<dfII", raw_data)
+                    log.write(f"{timestamp},{str(status).zfill(5)},{wvl:.7f},{pwr:.3f}\n")
+
+            print(f"Successfully saved {len(timestamps)} measurements from Bristol buffer.")
+        except Exception as e:
+            print(f"Error saving data: {e}")
 
 if __name__ == "__main__":
     test_lakeshore_475()
