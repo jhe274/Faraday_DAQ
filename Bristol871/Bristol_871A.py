@@ -356,7 +356,7 @@ class Bristol871(object):
         return self.query(':SENS:EXP:AUTO?')
     
     @auto_exposure.setter
-    def auto_exposure(self, value):
+    def auto_exposure(self, value: str):
         """
         Sets the state of the Auto Exposure function. When Auto Exposure is
         turned on the instrument modifies the exposure time dynamically to maintain the
@@ -413,13 +413,13 @@ class Bristol871(object):
         return self.query(':SENS:PID:STAT?')
     
     @pid_state.setter
-    def pid_state(self, value):
+    def pid_state(self, value: str):
         """If set to OFF the PID output
         voltage will be set to the default value defined by the SENSe:PID:VOLTage:DEFault command."""
         self.validate_input(value, ON_OFF, "Invalid PID state.")
         self.write(f':SENS:PID:STAT {value}')                            # RST Value = OFF
     
-    def pid_dafault(self, value):
+    def pid_dafault(self, value: float):
         """
         Sets/Queries the voltage output when the PID calculation is disabled, expressed
         in volts.
@@ -432,7 +432,7 @@ class Bristol871(object):
 
         return self.query(':SENS:PID:VOLT:DEF?')
     
-    def pid_max(self, value):
+    def pid_max(self, value: float):
         """
         Sets/Queries the maximum output voltage for the PID calculation, expressed in
         volts. The instrument automatically limits this voltage to a maximum of 5.0 volts.
@@ -445,7 +445,7 @@ class Bristol871(object):
 
         return self.query(':SENS:PID:VOLT:MAX?')
     
-    def pid_min(self, value):
+    def pid_min(self, value: float):
         """
         Sets/Queries the minimum output voltage for the PID calculation, expressed in
         volts. The instrument automatically limits this voltage to a maximum of -5.0 volts.
@@ -464,7 +464,7 @@ class Bristol871(object):
         return float(self.query(':SENS:PID:VOLT:OFFS?'))
     
     @pid_offset.setter
-    def voltage_offset(self, value):
+    def voltage_offset(self, value: float):
         """
         Sets the voltage offset for PID calculation.
         The instrument automatically limits this voltage to ± 5.0 volts.
@@ -472,7 +472,7 @@ class Bristol871(object):
         self.validate_input(value, VOLTAGE_RANGE, "Invalid voltage offset.")
         self.write(f':SENS:PID:VOLT:OFFS {value}')
     
-    def pid_scale(self, value):
+    def pid_scale(self, value: float):
         """
         Sets/Queries the voltage/gain scale for the PID calculation, expressed in volts per
         nanometer.
@@ -498,10 +498,10 @@ class Bristol871(object):
         return self.query(':TRIG:SEQ:METH?')
 
     @trigger_method.setter
-    def trigger_method(self, value):
+    def trigger_method(self, method: str):
         """Sets the trigger method being used for data collection."""
-        self.validate_input(value, TRIGGER_METHODS, "Invalid trigger method.")
-        self.write(f':TRIG:SEQ:METH {value}')
+        self.validate_input(method, TRIGGER_METHODS, "Invalid trigger method.")
+        self.write(f':TRIG:SEQ:METH {method}')
 
     @property
     def frame_rate(self):
@@ -509,7 +509,7 @@ class Bristol871(object):
         return int(self.query(':TRIG:SEQ:RATE?'))
     
     @frame_rate.setter
-    def frame_rate(self, value):
+    def frame_rate(self, value: int):
         """
         Sets the measurement rate of the internal trigger used for data collection. The
         INTernal TRIGger is specified as the number of measurements per second. The
