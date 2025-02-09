@@ -1,12 +1,12 @@
-import os, sys
+import os, sys, datetime
 from time import time, sleep, perf_counter, strftime, localtime
 from datetime import datetime as dt
 import nidaqmx.system, nidaqmx.system.storage
 from toptica.lasersdk.dlcpro.v2_5_3 import DLCpro, SerialConnection, DeviceNotFoundError
 from TopticaDLCpro.Laser import Laser
 from Bristol871.Bristol_871A import Bristol871
+from Lakeshore475DSPGaussmeter.Lakeshore475 import LakeShore475
 from pymeasure.instruments.signalrecovery import DSP7265
-from instruments.lakeshore import Lakeshore475
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 import numpy as np
 
@@ -16,6 +16,7 @@ K_vapor = os.path.join(dir_path, 'K_vapor_cell')
 DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro_data')
 lockin_path = os.path.join(K_vapor, 'Lockins_data')
 wavelengthmeter_path = os.path.join(K_vapor, 'Wavelengthmeter_data')
+gaussmeter_path = os.path.join(K_vapor, 'Gaussmeter_data')
 
 class Main:
     def __init__(self):
@@ -26,11 +27,13 @@ class Main:
         self.system.driver_version
 
         """Bristol 871A-VIS"""
-        self.port_Bristol = 'COM6'                                                              # Serial port number
+        self.port_wavelengthmeter = 'COM6'                                                      # Serial port number
+        self.ip_wavelengthmeter = '10.199.199.1'                                                # IP address
+        self.b = Bristol871(self.port_wavelengthmeter, self.ip_wavelengthmeter)
         self.auto_expo = 'ON'                                                                   # 'ON' or 'OFF'
-        self.cali_meth = 'TEMP'                                                                 # 'TIME' or 'TEMP'
+        self.b.calibration_method = 'TEMP'                                                      # 'TIME' or 'TEMP'
         self.delta_temp = 5                                                                     # Delta T = 0.5°C
-        self.trig_meth = 'INT'                                                                  # 'INT' or 'RISE' or 'FALL'
+        self.b.trigger_method = 'INT'                                                           # 'INT' or 'RISE' or 'FALL'
         self.fram_rate = 100                                                                    # [Hz]
         self.aver_stat = 'OFF'                                                                  # 'ON' or 'OFF'
         self.aver_type = 'WAV'
@@ -40,18 +43,18 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
-        self.ScanOffset = 62.80000                                                              # [V]
-        self.ScanAmplitude = 0                                                                  # [V]
+        self.ScanOffset = 57.1400                                                               # [V]
+        self.ScanStatus = True                                                                  # True -> Enable, False -> Disable
+        self.ScanAmplitude = 0.1                                                                # [V]
         self.StartVoltage = self.ScanOffset - 10                                                # [V]
         self.EndVoltage = self.ScanOffset + 10                                                  # [V]
         # self.StartVoltage = self.ScanOffset - 2                                                 # [V]
         # self.EndVoltage = self.ScanOffset + 2                                                   # [V]
-        self.ScanSpeed = 5                                                                   # [V/s]
-        # self.ScanSpeed = 0.05                                                                   # [V/s]
-        self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
-        self.ScanShape = 0                                                                      # 0 -> Sawtooth, 1 -> Traingle
+        self.WideScanSpeed = 0.05                                                               # [V/s]
+        self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.WideScanSpeed    # [s], (integer)
+        self.WideScanShape = 0                                                                  # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
-        self.RecorderStepsize = self.ScanSpeed * self.fram_rate                                 # [V]
+        self.RecorderStepsize = self.WideScanSpeed * self.fram_rate                             # [V]
         self.Ch1 = 0                                                                            # 0 -> Fine in 1
         self.Ch2 = 54                                                                           # 54 -> Laser PD
         self.LPfilter = True                                                                    # True -> Enable, False -> Disable
@@ -60,25 +63,35 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": -129.16, "gain": 0, "sens": 10e-3, "TC": 5e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": -132.94, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 5},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -168.74, "gain": 0, "sens": 10e-3, "TC": 5e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": -0.35, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 5},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": -177.28, "gain": 0, "sens": 1, "TC": 5, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 3.37, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 5},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "Mod": {"gpib": 6, "harmonic": 1, "phase": 144.37, "gain": 0, "sens": 500e-3, "TC": 5, 
-                    "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 5},
+            "Mod": {"gpib": 6, "harmonic": 1, "phase": 101.77, "gain": 0, "sens": 100e-3, "TC": 100e-3, 
+                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 0, "shield": 1, 
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
         self.lockin_settings = lockin_settings
+
+        """Lakeshore 475 DSP Gaussmeter"""
+        self.gpib_gaussmeter = "GPIB1::11::INSTR"
+        self.g = LakeShore475(self.gpib_gaussmeter)
+        self.g.auto = True                                                                      # 'ON' or 'OFF'
+        self.g.units = 'Gauss'                                                                  # [G] or [T]
+        self.gauss_rate = 10                                                                    # [Hz]
+        self.gauss_period = 1 / self.gauss_rate                                                 # [s]
+        self.gauss_Nperiods = int(self.WideScanDuration / self.gauss_period)                    # [s]
+        self.gauss_times = [ (i*self.gauss_period) for i in range(self.gauss_Nperiods) ]        # Gaussmeter measurement time array
 
         """
         Measurement settings
@@ -87,7 +100,7 @@ class Main:
         """
         self.EXT_H = 0.005                                                                      # 5ms pulse
         self.EXT_L = 0.005                                                                      # send every 5ms
-        self.INT_peri = 1 / self.fram_rate                                                      # Bristol measurement period while using EXTERNAL trigger
+        self.INT_peri = 1 / self.fram_rate                                                      # Bristol measurement period while using INTERNAL trigger
         self.EXT_peri = self.EXT_H + self.EXT_L                                                 # Bristol measurement period while using EXTERNAL trigger
         self.INT_NPeri = int(self.WideScanDuration / self.INT_peri)                             # Number of periods while using INTERNAL trigger
         self.EXT_NPeri = int(self.WideScanDuration / self.EXT_peri)                             # Number of periods while using EXTERNAL trigger
@@ -119,31 +132,43 @@ class Main:
 
     def config_DLCpro(self):
         """TOPTICA DLC pro"""
-        self.laser.WideScan(self.OutputChannel, self.ScanOffset, self.StartVoltage,
-                            self.EndVoltage, self.ScanSpeed, self.ScanShape,
+        self.laser.WideScan(self.OutputChannel, self.ScanStatus, self.ScanOffset, self.StartVoltage,
+                            self.EndVoltage, self.WideScanSpeed, self.WideScanShape,
                             self.WideScanDuration, self.InputTrigger, self.RecorderStepsize,
                             self.Ch1, self.Ch2, self.LPfilter, self.Ch1_CutOff, self.Ch2_CutOff)
 
-    def config_Bristol(self):
+    def config_wavelengthmeter(self):
         """Bristol wavelenght meter, model 871A-VIS"""
         try:
-            self.b = Bristol871(self.port_Bristol)
+            
             print('Detector type =          ', self.b.detector('CW'))                           # Detector type = CW
-            print('Auto exposure =          ', self.b.auto_exposure(self.auto_expo))
-            print('Calibration method =     ', self.b.calibration_method(self.cali_meth))
+            print('Auto exposure =          ', self.b.auto_exposure)
+            print('Calibration method =     ', self.b.calibration_method)
             self.b.calibration_temp(self.delta_temp)                                                  # Temperature delta = 0.5°C
-            print('Trigger method =         ', self.b.trigger_method(self.trig_meth))
-            if self.trig_meth == 'INT':
-                print('Frame rate =             ', self.b.frame_rate(self.fram_rate), 'Hz\n')
+            print('Trigger method =         ', self.b.trigger_method)
+            if self.b.trigger_method == 'INT':
+                print('Frame rate =             ', self.b.frame_rate, 'Hz\n')
                 # print('Average method =         ', self.b.average_state(self.aver_stat))
                 # print('Average data type =      ', self.b.average_data(self.aver_type))
                 # print('Average count =          ', self.b.average_count(self.aver_coun))
             else:
                 print('Frame rate =             ', round(1/self.EXT_peri), 'Hz\n')
             self.b.calibrate()                                                                      # Calibrate Bristol before the measurement
-            print('Bristol wavelength meter successfully configured!\n')
+            print('Bristol wavelengthmeter successfully configured!\n')
         except Exception as e:
-            print('Bristol871 wavelength meter not found: {}\n'.format(e))
+            print('Bristol871 wavelengthmeter configuration failed: {}\n'.format(e))
+            sys.exit(1)
+
+    def config_gaussmeter(self):
+        """Lakeshore 475 DSP Gaussmeter"""
+        try:
+            print(f'Self-Test Result =      ', self.g.self_test())
+            self.g.set_mode("DC", "5 digits", "wide band", "periodic", "positive")
+            print(f'Current mode =          ', self.g.mode)
+            print(f'Auto Range =            ', self.g.auto)
+            print(f'Current Units =         ', self.g.units)
+        except Exception as e:
+            print('Lakeshore 475 DSP Gaussmeter configuration failed: {}\n'.format(e))
             sys.exit(1)
 
     def config_lock_ins(self):
@@ -175,7 +200,7 @@ class Main:
     def init_buffer(self):
         """Initialize Bristol wavelength meter buffer"""
         try:
-            self.b.buffer('INIT')                                                                   # Initilize buffer
+            self.b.buffer_control('INIT')                                                                   # Initilize buffer
             print('Bristol buffer initialized!\n')
         except Exception as e:
             print('Bristol871 wavelength meter buffer initialization failed: {}\n'.format(e))
@@ -201,7 +226,7 @@ class Main:
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line2")                      # DIO2: Gate17, Toptica DLC pro
             task.start()
             i = 0
-            timestamps = []
+            timestamps, fields, temps = [], [], []
             timestamps_before_rise = []
             timestamps_after_rise = []
             try:
@@ -219,6 +244,8 @@ class Main:
                         timestamps_before_rise.append(time())
                         task.write(self.triple_rise)
                         timestamps_after_rise.append(time())
+                        fields.append(self.g.field)
+                        temps.append(self.g.temperature)
                         t1 = perf_counter()
                         while perf_counter() - t1 < (self.EXT_H):
                             pass
@@ -245,7 +272,7 @@ class Main:
                 formatted_timestamp = strftime("%Y-%m-%dT%H:%M:%S.", localtime(timestamp)) + f"{timestamp % 1:.3f}".split(".")[1]
                 timestamps.append(formatted_timestamp)
 
-        return start_time, elap_time, timestamps
+        return start_time, elap_time, timestamps, fields, temps
     
     def INT_trig_measure(self):
         """Internal trgiger mrthod for Bristol wavelength meter during measurements"""
@@ -256,26 +283,28 @@ class Main:
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line2")                      # DIO2: Gate17, Toptica DLC pro
             task.start()
             i = 0
-            timestamps = []
+            b_timestamps, g_timestamps, fields, temps = [], [], [], []
             try:
                 with DLCpro(SerialConnection(self.dlc_port)) as dlcpro:
                     dlcpro.laser1.wide_scan.start()
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n=============== Wide Scan Initiated ===============")
-                    self.b.buffer_control('OPEN')                                                       # Essentially a gated open buffer command
+                    self.b.buffer_control('OPEN')                                               # Essentially a gated open buffer command
                     start_time = time()
                     task.write(self.double_rise)
-                    while i < self.INT_NPeri:
+                    while i < self.gauss_Nperiods:
                         if i == 0:
                             t0 = perf_counter()
-                        while perf_counter() - t0 < self.INT_times[i]:
+                        while perf_counter() - t0 < self.gauss_times[i]:
                             pass
                         t1 = perf_counter()
-                        while perf_counter() - t1 < (self.INT_peri/2):
+                        while perf_counter() - t1 < (self.gauss_period/2):
                             pass
+                        fields.append(self.g.field)
+                        temps.append(self.g.temperature)
                         i = i + 1
-                        print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.INT_peri):4d}", 's', end='')
+                        print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.gauss_period):4d}", 's', end='')
                     for lockin in self.lockins.values():
                         lockin.halt_buffer()
                     self.b.buffer_control('CLOS')
@@ -288,34 +317,42 @@ class Main:
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
             task.stop()
-            timestamp = [start_time + INT_time for INT_time in self.INT_times]
+            b_timestamp = [start_time + INT_time for INT_time in self.INT_times]
             for j in range(self.INT_NPeri):
-                formatted_timestamp = strftime("%Y-%m-%dT%H:%M:%S.", localtime(timestamp[j])) + f"{timestamp[j] % 1:.3f}".split(".")[1]
-                timestamps.append(formatted_timestamp)
+                formatted_b_timestamp = strftime("%Y-%m-%dT%H:%M:%S.", localtime(b_timestamp[j])) + f"{b_timestamp[j] % 1:.3f}".split(".")[1]
+                b_timestamps.append(formatted_b_timestamp)
+            g_timestamp = [start_time + gauss_time for gauss_time in self.gauss_times]
+            for k in range(self.gauss_Nperiods):
+                formatted_g_timestamp = strftime("%Y-%m-%dT%H:%M:%S.", localtime(g_timestamp[k])) + f"{g_timestamp[k] % 1:.3f}".split(".")[1]
+                g_timestamps.append(formatted_g_timestamp)
 
-        return start_time, elap_time, timestamps
-    
-    def measure(self):
-        """Run measurement sequence."""
-        # Check if buffer length is exceeded
-        exceeded = [
-            name
-            for name in self.lockins
-            if self.WideScanDuration / self.lockin_settings[name]["interval"] > self.lockin_settings[name]["length"]
-        ]
+        return start_time, elap_time, b_timestamps, g_timestamps, fields, temps
 
-        if exceeded:
-            print(f"Number of data points exceeds buffer length for: {', '.join(exceeded)}.")
-            return
+    def save_gaussmeter_data(self, path, filename, timestamps, fields, temps):
+        """Save Gaussmeter data to a CSV file."""
+        # Generate file path with unique naming
+        folder_name = datetime.datetime.now().strftime("%m-%d-%Y")
+        folder_path = os.path.join(path, folder_name)
+        os.makedirs(folder_path, exist_ok=True)
 
-        trig_mode = self.b.trigger_method(self.trig_meth)
-        if trig_mode == "INT":
-            start_time, elap_time, timestamps = self.INT_trig_measure()
-        else:
-            start_time, elap_time, timestamps = self.EXT_trig_measure()
+        counter = 1
+        original_filename = filename
+        while os.path.isfile(os.path.join(folder_path, filename)):
+            filename = f"{original_filename.split('.')[0]}_{counter}.csv"
+            counter += 1
 
-        self.b.get_buffer(wavelengthmeter_path, f"Bristol_{dt.now().strftime('%Y-%m-%d')}.csv", elap_time, timestamps)
-        self.get_lock_in_buffer(lockin_path, f"Faraday_lockins_{dt.now().strftime('%Y-%m-%d')}.lvm", start_time)
+        file_path = os.path.join(folder_path, filename)
+
+        try:
+            with open(file_path, "w") as log:
+                header = "Timestamp,MagneticFluxDensity(G),Temperature(°C)\n"
+                log.write(header)
+                for timestamp,field,temp in zip(timestamps,fields,temps):
+                    log.write(f"{timestamp},{field},{temp}\n")
+
+            print(f"Successfully saved {len(timestamps)} measurements from Lakeshore 475 DSP Gaussmeter.")
+        except Exception as e:
+            print(f"Error saving data: {e}")
 
     def get_lock_in_buffer(self, path, filename, t0):
         """Retrieve data from all lock-in amplifiers' buffers."""
@@ -372,6 +409,28 @@ class Main:
                     log.write(",".join(map(str, row)) + "\n")
         except Exception as e:
             print(f"An error occurred while saving data: {e}")
+    
+    def measure(self):
+        """Run measurement sequence."""
+        # Check if buffer length is exceeded
+        exceeded = [
+            name
+            for name in self.lockins
+            if self.WideScanDuration / self.lockin_settings[name]["interval"] > self.lockin_settings[name]["length"]
+        ]
+
+        if exceeded:
+            print(f"Number of data points exceeds buffer length for: {', '.join(exceeded)}.")
+            return
+
+        if self.b.trigger_method == "INT":
+            start_time, elap_time, b_timestamps, g_timestamps, fields, temps = self.INT_trig_measure()
+        else:
+            start_time, elap_time, b_timestamps, g_timestamps, fields, temps = self.EXT_trig_measure()
+
+        self.save_gaussmeter_data(gaussmeter_path, f"Gaussmeter_{dt.now().strftime('%Y-%m-%d')}.csv", g_timestamps, fields, temps)
+        self.b.get_buffer(wavelengthmeter_path, f"Bristol_{dt.now().strftime('%Y-%m-%d')}.csv", elap_time, b_timestamps)
+        self.get_lock_in_buffer(lockin_path, f"Faraday_lockins_{dt.now().strftime('%Y-%m-%d')}.lvm", start_time)
 
     def countdown(self, seconds):
         for i in range(seconds, -1, -1):
@@ -382,7 +441,8 @@ if __name__ == "__main__":
     m = Main()
     m.config_NIcDAQ()
     m.config_DLCpro()
-    m.config_Bristol()
+    m.config_wavelengthmeter()
+    m.config_gaussmeter()
     m.config_lock_ins()
     m.init_buffer()
     m.measure()

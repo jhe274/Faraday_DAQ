@@ -30,7 +30,7 @@ class Bristol871(object):
     ESCAPE_TOKEN = 0x7D
     ESCAPE_XOR = 0x20
     
-    def __init__(self, port_number: str, ip_addr: str = "10.199.199.1", quiet: bool = False):
+    def __init__(self, port_number: str, ip_addr: str, quiet: bool = False):
         """Initializes the Bristol 871 device with Telnet and Serial connections."""
         self.serial_port = Serial(port=port_number, baudrate=921600, timeout=5)
         self.dev_addr = ip_addr
@@ -204,8 +204,8 @@ class Bristol871(object):
         """
         Retrieves buffered data from the instrument and saves it as a CSV file.
         """
-        self.buffer('CLOS')
-        self.buffer('DATA?')
+        self.buffer_control('CLOS')
+        self.buffer_control('DATA?')
         print('\nRetrieving data from Bristol buffer...')
         print('Getting first character:', self.tn.rawq_getchar())
 
@@ -236,12 +236,12 @@ class Bristol871(object):
         try:
             with open(file_path, "w") as log:
                 log.write("Timestamp,Status,Wavelength,Intensity\n")
-                for timestamp in timestamps:
+                for timestamp in timestamps[:num_samples]:
                     raw_data = b"".join(self.tn.rawq_getchar() for _ in range(20))
                     wvl, pwr, status, _ = struct.unpack("<dfII", raw_data)
                     log.write(f"{timestamp},{str(status).zfill(5)},{wvl:.7f},{pwr:.3f}\n")
 
-            print(f"Successfully saved {len(timestamps)} measurements from Bristol buffer.")
+            print(f"Successfully saved {len(timestamps[:num_samples])} measurements from Bristol buffer.")
         except Exception as e:
             print(f"Error saving data: {e}")
 

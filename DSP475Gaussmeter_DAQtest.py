@@ -1,9 +1,8 @@
-import os, datetime, sys
-from datetime import datetime as dt
+import os, datetime, sys, datetime
 from time import time, perf_counter, sleep, strftime, localtime
 import struct
 import nidaqmx.system, nidaqmx.system.storage
-from LakeshoreDSP475Gaussmeter.Lakeshore475 import LakeShore475
+from Lakeshore475DSPGaussmeter.Lakeshore475 import LakeShore475
 
 gpib_address = "GPIB1::11::INSTR"
 gaussmeter = LakeShore475(gpib_address)
@@ -19,7 +18,7 @@ Gaussmeter_path = os.path.join(K_vapor, 'Gaussmeter_data')
 
 def measure():
     i = 0
-    timestamps, data = [], []
+    timestamps, fields, temps = [], [], []
     print("\n=============== Measurement Initiated ===============")
     start_time = time()
     while i < trigger_NPeriods:
@@ -27,7 +26,8 @@ def measure():
             t0 = perf_counter()
         while perf_counter() - t0 < trigger_times[i]:
             pass
-        data.append(gaussmeter.field)
+        fields.append(gaussmeter.field)
+        temps.append(gaussmeter.temperature)
         t1 = perf_counter()
         while perf_counter() - t1 < (trigger_period/2):
             pass
@@ -42,9 +42,9 @@ def measure():
         timestamps.append(formatted_timestamp)
 
     print("Total time elapsed:", elap_time)
-    return data, start_time, elap_time, timestamps
+    return start_time, elap_time, timestamps, fields, temps
 
-def save_data(path, filename, timestamps, data):
+def save_data(path, filename, timestamps, fields, temps):
         # Generate file path with unique naming
         folder_name = datetime.datetime.now().strftime("%m-%d-%Y")
         folder_path = os.path.join(path, folder_name)
@@ -60,12 +60,12 @@ def save_data(path, filename, timestamps, data):
 
         try:
             with open(file_path, "w") as log:
-                header = "Timestamp, Magnetic flux density (G)\n"
+                header = "Timestamp,Magnetic flux density (G),Temperature (°C)\n"
                 log.write(header)
-                for timestamp,value in zip(timestamps,data):
-                    log.write(f"{timestamp},{value}\n")
+                for timestamp,field,temp in zip(timestamps,fields,temps):
+                    log.write(f"{timestamp},{field},{temp}\n")
 
-            print(f"Successfully saved {len(timestamps)} measurements from Gaussmeter.")
+            print(f"Successfully saved {len(timestamps)} measurements to {file_path}.")
         except Exception as e:
             print(f"Error saving data: {e}")
     
@@ -114,22 +114,22 @@ def test_lakeshore_475():
         print("\n=== Checking Field Setpoint ===")
         print(f"The current setpoint is: {gaussmeter.setpoint}")
         
-        # Start logging
-        print("\n=== Starting Data Logging for 1 Seconds ===")
-        gaussmeter.data_log(True)
-        sleep(MeasureDuration)
-        gaussmeter.data_log(False)
-        print("Data logging stopped.")
+        # # Start logging
+        # print("\n=== Starting Data Logging for 1 Seconds ===")
+        # gaussmeter.data_log(True)
+        # sleep(MeasureDuration)
+        # gaussmeter.data_log(False)
+        # print("Data logging stopped.")
 
-        # Get the number of points stored
-        print("\n=== Checking Data Buffer Size ===")
-        num_points = gaussmeter.data_log_num_points()
-        print(f"Data Points in Buffer: {num_points}")
+        # # Get the number of points stored
+        # print("\n=== Checking Data Buffer Size ===")
+        # num_points = gaussmeter.data_log_num_points()
+        # print(f"Data Points in Buffer: {num_points}")
 
-        # Retrieve and print data
-        print("\n=== Retrieving Logged Data ===")
-        logged_data = gaussmeter.get_log_data(num_points=10)
-        print(f"Logged Data: {logged_data}")
+        # # Retrieve and print data
+        # print("\n=== Retrieving Logged Data ===")
+        # logged_data = gaussmeter.get_log_data(num_points=10)
+        # print(f"Logged Data: {logged_data}")
 
         # Testing high-speed binary output
         """
@@ -147,8 +147,8 @@ def test_lakeshore_475():
         print(f"Test failed: {e}")
 
 if __name__ == "__main__":
-    data, start_time, elap_time, timestamps = measure()
-    save_data(Gaussmeter_path, f"Gaussmeter_{dt.now().strftime('%Y-%m-%d')}.csv", timestamps, data)
-    # test_lakeshore_475()
+    start_time, elap_time, timestamps, fields, temps = measure()
+    # save_data(Gaussmeter_path, f"Gaussmeter_{datetime.now().strftime('%Y-%m-%d')}.csv", timestamps, fields, temps)
+    test_lakeshore_475()
 
 
