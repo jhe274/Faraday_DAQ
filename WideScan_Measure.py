@@ -345,7 +345,7 @@ class Main:
 
         try:
             with open(file_path, "w") as log:
-                header = "Timestamp,MagneticFluxDensity(G),Temperature(°C)\n"
+                header = "Timestamp,MagneticFluxDensity(G),Temperature(C)\n"
                 log.write(header)
                 for timestamp,field,temp in zip(timestamps,fields,temps):
                     log.write(f"{timestamp},{field},{temp}\n")
