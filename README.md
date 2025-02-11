@@ -27,7 +27,7 @@ The code is structured to facilitate **expandability**, allowing users to integr
 │   ├── Bristol_871A.py        # Full Python driver for Bristol 871A Wavelength Meter
 │   ├── __init__.py            # Module initialization
 │
-├── 📂 LakeshoreDSP475Gaussmeter/
+├── 📂 Lakeshore475DSPGaussmeter/
 │   ├── Lakeshore475.py        # Full Python driver for Lakeshore DSP 475 Gaussmeter
 │   ├── __init__.py            # Module initialization
 │

@@ -43,8 +43,8 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
-        self.ScanOffset = 57.1400                                                               # [V]
-        self.ScanStatus = True                                                                  # True -> Enable, False -> Disable
+        self.ScanOffset = 59.8000                                                               # [V]
+        self.ScanStatus = False                                                                  # True -> Enable, False -> Disable
         self.ScanAmplitude = 0.1                                                                # [V]
         self.StartVoltage = self.ScanOffset - 10                                                # [V]
         self.EndVoltage = self.ScanOffset + 10                                                  # [V]
@@ -63,15 +63,15 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": -132.94, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": -119.52, "gain": 10, "sens": 10e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -0.35, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 179.54, "gain": 10, "sens": 10e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 3.37, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 7.25, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
@@ -98,8 +98,8 @@ class Main:
         The computer clock determines the timestamps for EXT trigger method
         the pulse period should not be shorter than 5ms
         """
-        self.EXT_H = 0.005                                                                      # 5ms pulse
-        self.EXT_L = 0.005                                                                      # send every 5ms
+        self.EXT_H = 0.1                                                                        # 100ms pulse
+        self.EXT_L = 0.1                                                                        # send every 100ms
         self.INT_peri = 1 / self.fram_rate                                                      # Bristol measurement period while using INTERNAL trigger
         self.EXT_peri = self.EXT_H + self.EXT_L                                                 # Bristol measurement period while using EXTERNAL trigger
         self.INT_NPeri = int(self.WideScanDuration / self.INT_peri)                             # Number of periods while using INTERNAL trigger
@@ -226,7 +226,7 @@ class Main:
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line2")                      # DIO2: Gate17, Toptica DLC pro
             task.start()
             i = 0
-            timestamps, fields, temps = [], [], []
+            timestamps, fields, temps = [], [], [], []
             timestamps_before_rise = []
             timestamps_after_rise = []
             try:
@@ -244,12 +244,12 @@ class Main:
                         timestamps_before_rise.append(time())
                         task.write(self.triple_rise)
                         timestamps_after_rise.append(time())
-                        fields.append(self.g.field)
-                        temps.append(self.g.temperature)
                         t1 = perf_counter()
                         while perf_counter() - t1 < (self.EXT_H):
                             pass
                         task.write(self.EXT_fall)
+                        fields.append(self.g.field)
+                        temps.append(self.g.temperature)
                         i = i + 1
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.EXT_peri):4d}", 's', end='')
                     sleep(self.EXT_L)
@@ -425,12 +425,15 @@ class Main:
 
         if self.b.trigger_method == "INT":
             start_time, elap_time, b_timestamps, g_timestamps, fields, temps = self.INT_trig_measure()
+            self.save_gaussmeter_data(gaussmeter_path, f"Gaussmeter_{dt.now().strftime('%Y-%m-%d')}.csv", g_timestamps, fields, temps)
+            self.b.get_buffer(wavelengthmeter_path, f"Bristol_{dt.now().strftime('%Y-%m-%d')}.csv", elap_time, b_timestamps)
+            self.get_lock_in_buffer(lockin_path, f"Faraday_lockins_{dt.now().strftime('%Y-%m-%d')}.lvm", start_time)
         else:
-            start_time, elap_time, b_timestamps, g_timestamps, fields, temps = self.EXT_trig_measure()
-
-        self.save_gaussmeter_data(gaussmeter_path, f"Gaussmeter_{dt.now().strftime('%Y-%m-%d')}.csv", g_timestamps, fields, temps)
-        self.b.get_buffer(wavelengthmeter_path, f"Bristol_{dt.now().strftime('%Y-%m-%d')}.csv", elap_time, b_timestamps)
-        self.get_lock_in_buffer(lockin_path, f"Faraday_lockins_{dt.now().strftime('%Y-%m-%d')}.lvm", start_time)
+            start_time, elap_time, timestamps, fields, temps = self.EXT_trig_measure()
+            self.save_gaussmeter_data(gaussmeter_path, f"Gaussmeter_{dt.now().strftime('%Y-%m-%d')}.csv", timestamps, fields, temps)
+            self.b.get_buffer(wavelengthmeter_path, f"Bristol_{dt.now().strftime('%Y-%m-%d')}.csv", elap_time, timestamps)
+            self.get_lock_in_buffer(lockin_path, f"Faraday_lockins_{dt.now().strftime('%Y-%m-%d')}.lvm", start_time)
+        
 
     def countdown(self, seconds):
         for i in range(seconds, -1, -1):
