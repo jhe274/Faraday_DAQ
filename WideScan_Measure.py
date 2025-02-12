@@ -3,9 +3,9 @@ from time import time, sleep, perf_counter, strftime, localtime
 from datetime import datetime as dt
 import nidaqmx.system, nidaqmx.system.storage
 from toptica.lasersdk.dlcpro.v2_5_3 import DLCpro, SerialConnection, DeviceNotFoundError
-from TopticaDLCpro.Laser import Laser
-from Bristol871.Bristol_871A import Bristol871
-from Lakeshore475DSPGaussmeter.Lakeshore475 import LakeShore475
+from Faraday_rotation_measurements.Data_acquisition.FR_DAQ.TopticaDLCpro.topticadlcpro import Laser
+from Bristol871.bristol_871A import Bristol871
+from Lakeshore475DSPGaussmeter.lakeshore475 import LakeShore475
 from pymeasure.instruments.signalrecovery import DSP7265
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 import numpy as np
@@ -43,14 +43,14 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
-        self.ScanOffset = 59.8000                                                               # [V]
-        self.ScanStatus = False                                                                  # True -> Enable, False -> Disable
-        self.ScanAmplitude = 0.1                                                                # [V]
-        self.StartVoltage = self.ScanOffset - 10                                                # [V]
-        self.EndVoltage = self.ScanOffset + 10                                                  # [V]
+        self.ScanOffset = 57.2200                                                               # [V]
+        self.ScanStatus = True                                                                  # True -> Enable, False -> Disable
+        self.ScanAmplitude = 0.05                                                               # [V]
+        self.StartVoltage = self.ScanOffset - 3                                                 # [V]
+        self.EndVoltage = self.ScanOffset + 3                                                   # [V]
         # self.StartVoltage = self.ScanOffset - 2                                                 # [V]
         # self.EndVoltage = self.ScanOffset + 2                                                   # [V]
-        self.WideScanSpeed = 0.05                                                               # [V/s]
+        self.WideScanSpeed = 0.025                                                               # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.WideScanSpeed    # [s], (integer)
         self.WideScanShape = 0                                                                  # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
@@ -63,19 +63,19 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": -119.52, "gain": 10, "sens": 10e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 48.94, "gain": 10, "sens": 2e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": 179.54, "gain": 10, "sens": 10e-3, "TC": 100e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": -165.50, "gain": 10, "sens": 50e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 7.25, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.29, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "Mod": {"gpib": 6, "harmonic": 1, "phase": 101.77, "gain": 0, "sens": 100e-3, "TC": 100e-3, 
+            "M2f": {"gpib": 6, "harmonic": 1, "phase": -82.51, "gain": 0, "sens": 100e-3, "TC": 100e-3, 
                     "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 0, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
         }
@@ -132,8 +132,8 @@ class Main:
 
     def config_DLCpro(self):
         """TOPTICA DLC pro"""
-        self.laser.WideScan(self.OutputChannel, self.ScanStatus, self.ScanOffset, self.StartVoltage,
-                            self.EndVoltage, self.WideScanSpeed, self.WideScanShape,
+        self.laser.WideScan(self.OutputChannel, self.ScanStatus, self.ScanOffset, self.ScanAmplitude, 
+                            self.StartVoltage, self.EndVoltage, self.WideScanSpeed, self.WideScanShape,
                             self.WideScanDuration, self.InputTrigger, self.RecorderStepsize,
                             self.Ch1, self.Ch2, self.LPfilter, self.Ch1_CutOff, self.Ch2_CutOff)
 

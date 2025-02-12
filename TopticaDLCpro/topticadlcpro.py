@@ -21,7 +21,7 @@ class Laser(object):
         # self.ScanSpeed = 0.05                                                               # [V/s]
         # self.ScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.ScanSpeed        # [s], (integer)
 
-    def WideScan(self, OutputChannel, ScanStatus, ScanOffset, StartVoltage, 
+    def WideScan(self, OutputChannel, ScanStatus, ScanOffset, ScanAmplitude, StartVoltage, 
                  EndVoltage, ScanSpeed, ScanShape, ScanDuration,
                  InputTrigger, RecorderStepsize, Ch1, Ch2,
                  LPfilter, Ch1_CutOff, Ch2_CutOff):
@@ -37,6 +37,7 @@ class Laser(object):
                     dlc.laser1.wide_scan.stop()
                     dlc.laser1.wide_scan.output_channel.set(OutputChannel)                  # PC Voltage
                     dlc.laser1.scan.offset.set(ScanOffset)
+                    dlc.laser1.scan.amplitude.set(ScanAmplitude)
                     dlc.laser1.scan.enabled.set(ScanStatus)
                     dlc.laser1.wide_scan.shape.set(ScanShape)
                     dlc.laser1.wide_scan._speed.set(ScanSpeed)

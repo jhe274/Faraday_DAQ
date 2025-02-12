@@ -2,9 +2,9 @@ import os, sys, datetime
 from time import time, sleep, perf_counter, strftime, localtime
 from datetime import datetime as dt
 import nidaqmx.system, nidaqmx.system.storage
-from Bristol871.Bristol_871A import Bristol871
+from Bristol871.bristol_871A import Bristol871
 from pymeasure.instruments.signalrecovery import DSP7265
-from Lakeshore475DSPGaussmeter.Lakeshore475 import LakeShore475
+from Lakeshore475DSPGaussmeter.lakeshore475 import LakeShore475
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 
 dir_path = os.path.join(os.getcwd(), 'Faraday_rotation_measurements')
