@@ -28,7 +28,7 @@ The code is structured to facilitate **expandability**, allowing users to integr
 │   ├── __init__.py            # Module initialization
 │
 ├── 📂 Lakeshore475DSPGaussmeter/
-│   ├── Lakeshore475.py        # Full Python driver for Lakeshore DSP 475 Gaussmeter
+│   ├── Lakeshore475.py        # Full Python driver for Lakeshore 475 DSP Gaussmeter
 │   ├── __init__.py            # Module initialization
 │
 ├── 📂 pymeasure/
