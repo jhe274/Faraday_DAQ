@@ -37,30 +37,30 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": -129.16, "gain": 10, "sens": 1e-3, "TC": 5e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 50.90, "gain": 10, "sens": 1e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -168.93, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": -165.16, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": -168.79, "gain": 0, "sens": 500e-3, "TC": 10, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 0.94, "gain": 0, "sens": 500e-3, "TC": 10, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
 
-            "Mod": {"gpib": 6, "harmonic": 1, "phase": -129.01, "gain": 0, "sens": 5e-3, "TC": 10, 
-                    "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
+            "M2f": {"gpib": 6, "harmonic": 1, "phase": -29.19, "gain": 10, "sens": 5e-3, "TC": 10, 
+                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 0, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
         self.lockin_settings = lockin_settings
         
-        """Wavetek 50 MHz Function generator, model 80"""
-        self.B0_sweep_period = 1 / (300e-3)                                                     # [s]
-        self.B0_sweep_NPeriods = 400                                                            # Number of periods
-        self.B0_sweep_times = [(i*self.B0_sweep_period) for i in range(self.B0_sweep_NPeriods)] # Measurement time array while using INTERNAL trigger
+        """Keysight 33500B series, waveform generator"""
+        self.B0_sweep_period = 1 / (1)                                                          # [s]
+        self.B0_sweep_NPeriods = 1800                                                             # Number of periods
+        self.B0_sweep_times = [(i*self.B0_sweep_period) for i in range(self.B0_sweep_NPeriods+1)] # Measurement time array while using INTERNAL trigger
         
         """Measurement time with Helmholtz coil modulation"""
         self.MeasureDuration = self.B0_sweep_NPeriods * self.B0_sweep_period                    # [s]
@@ -73,7 +73,7 @@ class Main:
         self.gauss_rate = 10                                                                    # [Hz]
         self.gauss_period = 1 / self.gauss_rate                                                 # [s]
         self.gauss_Nperiods = int(self.MeasureDuration / self.gauss_period)                     # [s]
-        self.gauss_times = [ (i*self.gauss_period) for i in range(self.gauss_Nperiods) ]        # Gaussmeter measurement time array
+        self.gauss_times = [ (i*self.gauss_period) for i in range(self.gauss_Nperiods + 1) ]    # Gaussmeter measurement time array
 
         """
         Measurement settings using EXTERNAL trigger method for Bristol Wavelength meter
@@ -125,7 +125,7 @@ class Main:
             print('Detector type =          ', self.b.detector('CW'))                               # Detector type = CW
             print('Auto exposure =          ', self.b.auto_exposure)
             print('Calibration method =     ', self.b.calibration_method)
-            self.b.calibration_temp(self.delta_t)
+            self.b.calibration_timer(self.delta_t)
             print('Trigger method =         ', self.b.trigger_method)
             if self.b.trigger_method == 'INT':
                 print('Frame rate =             ', self.b.frame_rate, 'Hz\n')
@@ -245,23 +245,57 @@ class Main:
             print(f'Measurement duration =   {int(self.MeasureDuration):4d}', 's')
             self.countdown(5)
             print("\n=============== Measurement Initiated ===============")
+            i = 0  # Index for gaussmeter measurements
+            j = 0  # Index for B0 sweep times
             self.b.buffer_control('OPEN')                                                        # Essentially a gated open buffer command
             start_time = time()
             task.write(self.double_rise)
-            while i < self.B0_sweep_NPeriods:
-                if i == 0:
-                    t0 = perf_counter()
-                while perf_counter() - t0 < self.B0_sweep_times[i]:
+
+            if i == 0:
+                t0 = perf_counter()  # Reference start time
+
+            while i < self.gauss_Nperiods:
+                # Calculate the remaining wait time before next measurement
+                wait_time = self.gauss_times[i] - (perf_counter() - t0)
+                
+                if wait_time > 0.002:  # Use sleep() for coarse timing if >2ms
+                    sleep(wait_time - 0.001)  # Sleep slightly less to leave fine-tuning room
+                
+                # Fine-tune with busy-wait for sub-millisecond precision
+                while perf_counter() - t0 < self.gauss_times[i]:
                     pass
-                task.write(self.double_rise)
-                t1 = perf_counter()
-                while perf_counter() - t1 < (self.B0_sweep_period/2):
-                    pass
-                task.write(self.field_fall)
+                
+                # Record gaussmeter measurements
                 fields.append(self.g.field)
                 temps.append(self.g.temperature)
-                i = i + 1
-                print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.B0_sweep_period):4d}", 's', end='')
+
+                # Check if it's time for B0 sweep (full-integer times)
+                if j < self.B0_sweep_NPeriods and perf_counter() - t0 >= self.B0_sweep_times[j]:
+                    task.write(self.double_rise)
+                    t1 = perf_counter()  # Mark time after rising edge
+
+                    # Wait until the half-period using hybrid sleep & busy-wait
+                    wait_time = (self.gauss_period / 2) - (perf_counter() - t1)
+                    if wait_time > 0.002:
+                        sleep(wait_time - 0.001)
+                    while perf_counter() - t1 < (self.gauss_period / 2):
+                        pass
+                    
+                    fields.append(self.g.field)
+                    temps.append(self.g.temperature)
+
+                    # Wait until the next full B0_sweep_period/2 before applying the falling edge
+                    wait_time = (self.B0_sweep_period / 2) - (perf_counter() - t1)
+                    if wait_time > 0.002:
+                        sleep(wait_time - 0.001)
+                    while perf_counter() - t1 < (self.B0_sweep_period / 2):
+                        pass
+
+                    task.write(self.double_fall)  # Trigger falling edge
+                    j += 1  # Move to the next B0 sweep time
+
+                i += 1  # Move to the next gauss time index
+                print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.gauss_period):4d}", 's', end='')
 
             sleep(self.B0_sweep_period / 2)                                                     # Wait until the end of the last half period          
             for lockin in self.lockins.values():
