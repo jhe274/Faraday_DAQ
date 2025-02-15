@@ -30,36 +30,36 @@ class Main:
         self.b.calibration_method = 'TIME'                                                      # 'TIME' or 'TEMP'
         self.delta_t = 5                                                                        # Delta T = 5 min
         self.b.trigger_method = 'INT'                                                           # 'INT' or 'RISE' or 'FALL'
-        self.fram_rate = 100                                                                    # [Hz]
+        self.frame_rate = 20                                                                     # [Hz]
         self.aver_stat = 'OFF'                                                                  # 'ON' or 'OFF'
         self.aver_type = 'WAV'
         self.aver_coun = 20
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 50.90, "gain": 10, "sens": 1e-3, "TC": 5e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.66, "gain": 10, "sens": 1e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -165.16, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": -165.39, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 0.94, "gain": 0, "sens": 500e-3, "TC": 10, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": -1.05, "gain": 0, "sens": 500e-3, "TC": 100, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100},
 
-            "M2f": {"gpib": 6, "harmonic": 1, "phase": -29.19, "gain": 10, "sens": 5e-3, "TC": 10, 
-                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 0, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 10},
+            "M2f": {"gpib": 6, "harmonic": 1, "phase": -29.19, "gain": 0, "sens": 5e-3, "TC": 100, 
+                    "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
         self.lockin_settings = lockin_settings
         
         """Keysight 33500B series, waveform generator"""
-        self.B0_sweep_period = 1 / (1)                                                          # [s]
-        self.B0_sweep_NPeriods = 1800                                                             # Number of periods
+        self.B0_sweep_period = 1 / 0.5                                                          # [s]
+        self.B0_sweep_NPeriods = 14400                                                           # Number of periods
         self.B0_sweep_times = [(i*self.B0_sweep_period) for i in range(self.B0_sweep_NPeriods+1)] # Measurement time array while using INTERNAL trigger
         
         """Measurement time with Helmholtz coil modulation"""
@@ -83,7 +83,7 @@ class Main:
         # self.MeasureDuration = 400                                                              # [s]
         self.EXT_H = 0.005                                                                      # 5ms pulse
         self.EXT_L = 0.005                                                                      # send every 5ms
-        self.INT_peri = 1 / self.fram_rate                                                      # Bristol measurement period while using EXTERNAL trigger
+        self.INT_peri = 1 / self.frame_rate                                                      # Bristol measurement period while using EXTERNAL trigger
         self.EXT_peri = self.EXT_H + self.EXT_L                                                 # Bristol measurement period while using EXTERNAL trigger
         self.INT_NPeri = int(self.MeasureDuration / self.INT_peri)                              # Number of periods while using INTERNAL trigger
         self.EXT_NPeri = int(self.MeasureDuration / self.EXT_peri)                              # Number of periods while using EXTERNAL trigger
@@ -126,6 +126,7 @@ class Main:
             print('Auto exposure =          ', self.b.auto_exposure)
             print('Calibration method =     ', self.b.calibration_method)
             self.b.calibration_timer(self.delta_t)
+            self.b.frame_rate =  self.frame_rate
             print('Trigger method =         ', self.b.trigger_method)
             if self.b.trigger_method == 'INT':
                 print('Frame rate =             ', self.b.frame_rate, 'Hz\n')

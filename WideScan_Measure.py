@@ -43,7 +43,7 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
-        self.ScanOffset = 60.8400                                                               # [V]
+        self.ScanOffset = 62.1200                                                               # [V]
         self.ScanStatus = True                                                                  # True -> Enable, False -> Disable
         self.ScanAmplitude = 0.025                                                              # [V]
         self.StartVoltage = self.ScanOffset - 4                                                 # [V]
