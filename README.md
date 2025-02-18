@@ -6,14 +6,15 @@ This repository provides a **comprehensive and modular control system** for cond
 - **Signal Recovery DSP 7265 Lock-in Amplifiers** (using `pymeasure.instruments.signalrecovery.DSP7265`)
 - **TOPTICA DLC Pro Tunable Diode Laser**
 - **National Instruments cDAQ-9172 Data Acquisition System**
-- **Lakeshore DSP 475 Gaussmeter**
+- **Lakeshore 475 DSP Gaussmeter**
 - **Thorlabs TC300 Temperature Controller**
 
 The code is structured to facilitate **expandability**, allowing users to integrate additional devices and measurement routines as needed.
 
 ---
 ## Features
-✅ **Full control** over the Bristol 871A wavelength meter (Telnet & Serial communication)  
+✅ **Full control** over the Bristol 871A wavelength meter (Telnet & Serial communication)
+✅ **Real time** magnetic field and temperature measurements using Lakeshore 475 DSP Gaussmeter (GPIB communication)
 ✅ **Modular instrument control** for multiple DSP 7265 lock-in amplifiers using `pymeasure`  
 ✅ **Automated wide-scan and locked-laser measurement routines**  
 ✅ **Support for synchronous data acquisition and timestamped data logging**  
@@ -86,6 +87,7 @@ python LockedLaser_Measure.py
 ```
 This script controls:
 - **Bristol 871A** for wavelength measurements
+- **Lakeshore 475 DSP Gaussmeter** for magnetic field and temperature measurements
 - **DSP 7265 lock-in amplifiers** (using `pymeasure.instruments.signalrecovery.DSP7265`)
 - **Wavetek 50 MHz Function generator, model 80** for voltage controlled magnetic field modulation
 - **NI-cDAQ-9172** for triggering
@@ -151,11 +153,18 @@ Data is **automatically saved** in organized directories under `Faraday rotation
 │   │       ├── Faraday_lockins_20XX-XX-XX.csv
 ```
 
-### 📑 Example CSV Format for Bristol Data
+### 📑 Example CSV Format for Wavelengthmeter Data
 ```csv
 Timestamp,Status,Wavelength (nm),Power (mW)
 2024-01-30T12:30:01.123,00004,770.123456,0.512
 2024-01-30T12:30:02.456,00004,770.124678,0.510
+```
+
+### 📑 Example CSV Format for Gaussmeter Data
+```csv
+Timestamp,MagneticFluxDensity(G),Temperature(C)
+2024-01-30T12:30:01.123,5.0001,22.0001
+2024-01-30T12:30:02.456,5.0001,22.0001
 ```
 
 ### 📑 Example LVM Format for Lock-In Data
