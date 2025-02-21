@@ -237,12 +237,11 @@ class Main:
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line1")                      # DIO1: Gate16, lock-ins
             task.do_channels.add_do_chan(f"{self.NI_channel}/port0/line3")                      # DIO3: Gate19, function generator
             task.start()
-            i = 0
+            i = 0  # Indices for gaussmeter
             b_timestamps, g_timestamps, fields, temps = [], [], [], []
             print(f'Measurement duration =   {int(self.MeasureDuration):4d}', 's')
             self.countdown(5)
             print("\n=============== Measurement Initiated ===============")
-            i = 0  # Indices for gaussmeter and B0 sweep
             self.b.buffer_control('OPEN')
             start_time = time()
             task.write(self.double_rise)
@@ -266,7 +265,7 @@ class Main:
                 temps.append(self.g.temperature)
 
                 i += 1  # Move to next gaussmeter measurement
-                
+
                 print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.gauss_period):4d}", 's', end='')       
             for lockin in self.lockins.values():
                         lockin.halt_buffer()
