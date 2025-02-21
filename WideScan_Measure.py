@@ -293,17 +293,27 @@ class Main:
                     self.b.buffer_control('OPEN')                                               # Essentially a gated open buffer command
                     start_time = time()
                     task.write(self.double_rise)
+
+                    t0 = perf_counter()  # High-precision reference start time
+
                     while i < self.gauss_Nperiods:
-                        if i == 0:
-                            t0 = perf_counter()
-                        while perf_counter() - t0 < self.gauss_times[i]:
-                            pass
-                        t1 = perf_counter()
-                        while perf_counter() - t1 < (self.gauss_period/2):
-                            pass
+                        target_time = t0 + self.gauss_times[i]  # Precompute exact target time
+                        
+                        # Hybrid sleep strategy: Coarse sleep first, then fine-tune with busy wait
+                        wait_time = target_time - perf_counter()
+                        if wait_time > 0.002:
+                            sleep(wait_time - 0.001)
+                        
+                        while perf_counter() < target_time:
+                            if target_time - perf_counter() > 0.001:
+                                sleep(0)  # Yield CPU to prevent excessive busy-waiting
+                        
+                        # Record gaussmeter measurements
                         fields.append(self.g.field)
                         temps.append(self.g.temperature)
-                        i = i + 1
+
+                        i += 1  # Move to next gaussmeter measurement
+                    
                         print(f"\rTime remaining:          {int(self.WideScanDuration-i*self.gauss_period):4d}", 's', end='')
                     for lockin in self.lockins.values():
                         lockin.halt_buffer()

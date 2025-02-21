@@ -242,7 +242,7 @@ class Main:
             print(f'Measurement duration =   {int(self.MeasureDuration):4d}', 's')
             self.countdown(5)
             print("\n=============== Measurement Initiated ===============")
-            i, j = 0, 0  # Indices for gaussmeter and B0 sweep
+            i = 0  # Indices for gaussmeter and B0 sweep
             self.b.buffer_control('OPEN')
             start_time = time()
             task.write(self.double_rise)
@@ -266,6 +266,7 @@ class Main:
                 temps.append(self.g.temperature)
 
                 i += 1  # Move to next gaussmeter measurement
+                
                 print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.gauss_period):4d}", 's', end='')       
             for lockin in self.lockins.values():
                         lockin.halt_buffer()
