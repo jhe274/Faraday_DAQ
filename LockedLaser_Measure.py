@@ -30,28 +30,28 @@ class Main:
         self.b.calibration_method = 'TIME'                                                      # 'TIME' or 'TEMP'
         self.delta_t = 5                                                                        # Delta T = 5 min
         self.b.trigger_method = 'INT'                                                           # 'INT' or 'RISE' or 'FALL'
-        self.frame_rate = 20                                                                     # [Hz]
+        self.frame_rate = 50                                                                     # [Hz]
         self.aver_stat = 'OFF'                                                                  # 'ON' or 'OFF'
         self.aver_type = 'WAV'
         self.aver_coun = 20
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.66, "gain": 10, "sens": 1e-3, "TC": 5e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.00, "gain": 10, "sens": 1e-3, "TC": 50, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -165.39, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 15.97, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": -1.05, "gain": 0, "sens": 500e-3, "TC": 100, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.29, "gain": 0, "sens": 500e-3, "TC": 50, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
 
-            "M2f": {"gpib": 6, "harmonic": 1, "phase": -29.19, "gain": 0, "sens": 5e-3, "TC": 100, 
+            "M2f": {"gpib": 6, "harmonic": 1, "phase": -15.73, "gain": 0, "sens": 10e-3, "TC": 50, 
                     "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
@@ -59,7 +59,7 @@ class Main:
         
         """Keysight 33500B series, waveform generator"""
         self.B0_sweep_period = 1 / 0.5                                                          # [s]
-        self.B0_sweep_NPeriods = 14400                                                           # Number of periods
+        self.B0_sweep_NPeriods = 7200                                                           # Number of periods
         self.B0_sweep_times = [(i*self.B0_sweep_period) for i in range(self.B0_sweep_NPeriods+1)] # Measurement time array while using INTERNAL trigger
         
         """Measurement time with Helmholtz coil modulation"""

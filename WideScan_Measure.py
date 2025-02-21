@@ -43,14 +43,14 @@ class Main:
         self.dlc_port = 'COM5'                                                                  # Serial port number
         self.laser = Laser(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
-        self.ScanOffset = 62.1200                                                               # [V]
+        self.ScanOffset = 53.3000                                                               # [V]
         self.ScanStatus = True                                                                  # True -> Enable, False -> Disable
         self.ScanAmplitude = 0.025                                                              # [V]
-        self.StartVoltage = self.ScanOffset - 4                                                 # [V]
-        self.EndVoltage = self.ScanOffset + 4                                                   # [V]
+        self.StartVoltage = self.ScanOffset - 5                                                 # [V]
+        self.EndVoltage = self.ScanOffset + 5                                                   # [V]
         # self.StartVoltage = self.ScanOffset - 2                                                 # [V]
         # self.EndVoltage = self.ScanOffset + 2                                                   # [V]
-        self.WideScanSpeed = 0.01                                                               # [V/s]
+        self.WideScanSpeed = 0.025                                                               # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.WideScanSpeed    # [s], (integer)
         self.WideScanShape = 0                                                                  # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
@@ -63,15 +63,15 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 50.21, "gain": 10, "sens": 2e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.35, "gain": 10, "sens": 2e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": -165.50, "gain": 10, "sens": 50e-3, "TC": 5e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 15.53, "gain": 10, "sens": 50e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 0.97, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 0.06, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
