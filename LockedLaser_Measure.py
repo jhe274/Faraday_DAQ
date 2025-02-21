@@ -37,7 +37,7 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.00, "gain": 10, "sens": 1e-3, "TC": 50, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.35, "gain": 10, "sens": 1e-3, "TC": 50, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
 
@@ -45,25 +45,20 @@ class Main:
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.29, "gain": 0, "sens": 500e-3, "TC": 50, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 0.03, "gain": 0, "sens": 500e-3, "TC": 50, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
 
-            "M2f": {"gpib": 6, "harmonic": 1, "phase": -15.73, "gain": 0, "sens": 10e-3, "TC": 50, 
+            "M2f": {"gpib": 6, "harmonic": 1, "phase": -9.65, "gain": 0, "sens": 5e-3, "TC": 50, 
                     "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
         self.lockin_settings = lockin_settings
-        
-        """Keysight 33500B series, waveform generator"""
-        self.B0_sweep_period = 1 / 0.5                                                          # [s]
-        self.B0_sweep_NPeriods = 7200                                                           # Number of periods
-        self.B0_sweep_times = [(i*self.B0_sweep_period) for i in range(self.B0_sweep_NPeriods+1)] # Measurement time array while using INTERNAL trigger
-        
-        """Measurement time with Helmholtz coil modulation"""
-        self.MeasureDuration = self.B0_sweep_NPeriods * self.B0_sweep_period                    # [s]
+
+        """Total measurement duration"""
+        self.MeasureDuration = 14400                                                               # [s]
 
         """Lakeshore 475 DSP Gaussmeter"""
         self.gpib_gaussmeter = "GPIB1::11::INSTR"
@@ -72,8 +67,9 @@ class Main:
         self.g.units = 'Gauss'                                                                  # [G] or [T]
         self.gauss_rate = 10                                                                    # [Hz]
         self.gauss_period = 1 / self.gauss_rate                                                 # [s]
-        self.gauss_Nperiods = int(self.MeasureDuration / self.gauss_period)                     # [s]
+        self.gauss_Nperiods = int(self.MeasureDuration / self.gauss_period)                          # Number of periods
         self.gauss_times = [ (i*self.gauss_period) for i in range(self.gauss_Nperiods + 1) ]    # Gaussmeter measurement time array
+
 
         """
         Measurement settings using EXTERNAL trigger method for Bristol Wavelength meter
@@ -246,59 +242,31 @@ class Main:
             print(f'Measurement duration =   {int(self.MeasureDuration):4d}', 's')
             self.countdown(5)
             print("\n=============== Measurement Initiated ===============")
-            i = 0  # Index for gaussmeter measurements
-            j = 0  # Index for B0 sweep times
-            self.b.buffer_control('OPEN')                                                        # Essentially a gated open buffer command
+            i, j = 0, 0  # Indices for gaussmeter and B0 sweep
+            self.b.buffer_control('OPEN')
             start_time = time()
             task.write(self.double_rise)
 
-            if i == 0:
-                t0 = perf_counter()  # Reference start time
+            t0 = perf_counter()  # High-precision reference start time
 
             while i < self.gauss_Nperiods:
-                # Calculate the remaining wait time before next measurement
-                wait_time = self.gauss_times[i] - (perf_counter() - t0)
+                target_time = t0 + self.gauss_times[i]  # Precompute exact target time
                 
-                if wait_time > 0.002:  # Use sleep() for coarse timing if >2ms
-                    sleep(wait_time - 0.001)  # Sleep slightly less to leave fine-tuning room
+                # Hybrid sleep strategy: Coarse sleep first, then fine-tune with busy wait
+                wait_time = target_time - perf_counter()
+                if wait_time > 0.002:
+                    sleep(wait_time - 0.001)
                 
-                # Fine-tune with busy-wait for sub-millisecond precision
-                while perf_counter() - t0 < self.gauss_times[i]:
-                    pass
+                while perf_counter() < target_time:
+                    if target_time - perf_counter() > 0.001:
+                        sleep(0)  # Yield CPU to prevent excessive busy-waiting
                 
                 # Record gaussmeter measurements
                 fields.append(self.g.field)
                 temps.append(self.g.temperature)
 
-                # Check if it's time for B0 sweep (full-integer times)
-                if j < self.B0_sweep_NPeriods and perf_counter() - t0 >= self.B0_sweep_times[j]:
-                    task.write(self.double_rise)
-                    t1 = perf_counter()  # Mark time after rising edge
-
-                    # Wait until the half-period using hybrid sleep & busy-wait
-                    wait_time = (self.gauss_period / 2) - (perf_counter() - t1)
-                    if wait_time > 0.002:
-                        sleep(wait_time - 0.001)
-                    while perf_counter() - t1 < (self.gauss_period / 2):
-                        pass
-                    
-                    fields.append(self.g.field)
-                    temps.append(self.g.temperature)
-
-                    # Wait until the next full B0_sweep_period/2 before applying the falling edge
-                    wait_time = (self.B0_sweep_period / 2) - (perf_counter() - t1)
-                    if wait_time > 0.002:
-                        sleep(wait_time - 0.001)
-                    while perf_counter() - t1 < (self.B0_sweep_period / 2):
-                        pass
-
-                    task.write(self.double_fall)  # Trigger falling edge
-                    j += 1  # Move to the next B0 sweep time
-
-                i += 1  # Move to the next gauss time index
-                print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.gauss_period):4d}", 's', end='')
-
-            sleep(self.B0_sweep_period / 2)                                                     # Wait until the end of the last half period          
+                i += 1  # Move to next gaussmeter measurement
+                print(f"\rTime remaining:          {int(self.MeasureDuration-i*self.gauss_period):4d}", 's', end='')       
             for lockin in self.lockins.values():
                         lockin.halt_buffer()
             self.b.buffer_control('CLOS')
