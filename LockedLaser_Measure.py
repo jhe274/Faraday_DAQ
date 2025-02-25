@@ -37,21 +37,21 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.35, "gain": 10, "sens": 1e-3, "TC": 50, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.95, "gain": 10, "sens": 1e-3, "TC": 20, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": 15.97, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 16.24, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 0.03, "gain": 0, "sens": 500e-3, "TC": 50, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": -1.24, "gain": 0, "sens": 500e-3, "TC": 20, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
 
-            "M2f": {"gpib": 6, "harmonic": 1, "phase": -9.65, "gain": 0, "sens": 5e-3, "TC": 50, 
+            "M2f": {"gpib": 6, "harmonic": 1, "phase": -14.60, "gain": 0, "sens": 50e-3, "TC": 20, 
                     "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 50},
+                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
@@ -69,7 +69,6 @@ class Main:
         self.gauss_period = 1 / self.gauss_rate                                                 # [s]
         self.gauss_Nperiods = int(self.MeasureDuration / self.gauss_period)                          # Number of periods
         self.gauss_times = [ (i*self.gauss_period) for i in range(self.gauss_Nperiods + 1) ]    # Gaussmeter measurement time array
-
 
         """
         Measurement settings using EXTERNAL trigger method for Bristol Wavelength meter
@@ -218,7 +217,7 @@ class Main:
             self.b.buffer_control('CLOS')
             elap_time = perf_counter() - t0
             task.write(self.triple_fall)
-            print("=============== Measurement Completed ===============")
+            print("\n=============== Measurement Completed ===============")
             print(f'{self.EXT_NPeri} periods of {self.EXT_peri} seconds')
             task.stop()
             start_time = (timestamps_before_rise[0]+timestamps_after_rise[0]) / 2
@@ -271,8 +270,8 @@ class Main:
                         lockin.halt_buffer()
             self.b.buffer_control('CLOS')
             elap_time = perf_counter() - t0
-            task.write(self.double_fall)
-            print("=============== Measurement Completed ===============")
+            # task.write(self.double_fall)
+            print("\n=============== Measurement Completed ===============")
             task.stop()
             b_timestamp = [start_time + INT_time for INT_time in self.INT_times]
             for j in range(self.INT_NPeri):
