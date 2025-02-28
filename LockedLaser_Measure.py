@@ -30,7 +30,7 @@ class Main:
         self.b.calibration_method = 'TIME'                                                      # 'TIME' or 'TEMP'
         self.delta_t = 5                                                                        # Delta T = 5 min
         self.b.trigger_method = 'INT'                                                           # 'INT' or 'RISE' or 'FALL'
-        self.frame_rate = 50                                                                     # [Hz]
+        self.frame_rate = 100                                                                   # [Hz]
         self.aver_stat = 'OFF'                                                                  # 'ON' or 'OFF'
         self.aver_type = 'WAV'
         self.aver_coun = 20
@@ -41,15 +41,15 @@ class Main:
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": 16.24, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 16.37, "gain": 10, "sens": 10e-3, "TC": 5e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": -1.24, "gain": 0, "sens": 500e-3, "TC": 20, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 0.24, "gain": 0, "sens": 500e-3, "TC": 20, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
 
-            "M2f": {"gpib": 6, "harmonic": 1, "phase": -14.60, "gain": 0, "sens": 50e-3, "TC": 20, 
+            "M2f": {"gpib": 6, "harmonic": 1, "phase": -14.70, "gain": 0, "sens": 20e-3, "TC": 20, 
                     "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
         }
@@ -58,7 +58,7 @@ class Main:
         self.lockin_settings = lockin_settings
 
         """Total measurement duration"""
-        self.MeasureDuration = 14400                                                               # [s]
+        self.MeasureDuration = 3600                                                             # [s]
 
         """Lakeshore 475 DSP Gaussmeter"""
         self.gpib_gaussmeter = "GPIB1::11::INSTR"
