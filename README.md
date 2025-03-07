@@ -13,8 +13,8 @@ The code is structured to facilitate **expandability**, allowing users to integr
 
 ---
 ## Features
-✅ **Full control** over the Bristol 871A wavelength meter (Telnet & Serial communication)
-✅ **Real time** magnetic field and temperature measurements using Lakeshore 475 DSP Gaussmeter (GPIB communication)
+✅ **Full control** over the Bristol 871A wavelength meter (Telnet & Serial communication)  
+✅ **Real time** magnetic field and temperature measurements using Lakeshore 475 DSP Gaussmeter (GPIB communication)  
 ✅ **Modular instrument control** for multiple DSP 7265 lock-in amplifiers using `pymeasure`  
 ✅ **Automated wide-scan and locked-laser measurement routines**  
 ✅ **Support for synchronous data acquisition and timestamped data logging**  
