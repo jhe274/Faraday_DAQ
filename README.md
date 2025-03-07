@@ -121,7 +121,7 @@ These scripts are optimized for:
 - **Full integration** with the TOPTICA SDK.
 - Supports **wide-scan control, triggering, and post measurement data acquisition**.
 
-### 🏷 **National Instruments cDAQ-9172**
+### 🕹️ **National Instruments cDAQ-9172**
 - Used for **synchronized triggering** of all devices.
 - Configured to interface with **NI DAQmx drivers**.
 
