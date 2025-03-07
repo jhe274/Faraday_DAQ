@@ -70,12 +70,13 @@ pip install -r requirements.txt
 ---
 ## Usage
 ### 🔹 Wide-Scan Measurement
-Run **WideScan_Measure.py** for scanning a broad range of wavelengths:
+Run **WideScan_Measure.py** for scanning the laser up to tens of GHz:
 ```bash
 python WideScan_Measure.py
 ```
 This script controls:
 - **Bristol 871A** for wavelength measurements
+- **Lakeshore 475 DSP Gaussmeter** for magnetic field and temperature measurements
 - **DSP 7265 lock-in amplifiers** (using `pymeasure.instruments.signalrecovery.DSP7265`)
 - **TOPTICA DLC Pro** for laser control
 - **NI-cDAQ-9172** for triggering
@@ -89,7 +90,7 @@ This script controls:
 - **Bristol 871A** for wavelength measurements
 - **Lakeshore 475 DSP Gaussmeter** for magnetic field and temperature measurements
 - **DSP 7265 lock-in amplifiers** (using `pymeasure.instruments.signalrecovery.DSP7265`)
-- **Wavetek 50 MHz Function generator, model 80** for voltage controlled magnetic field modulation
+- **Keysight 33522B Waveform Generator** for voltage controlled magnetic field modulation
 - **NI-cDAQ-9172** for triggering
 
 These scripts are optimized for:
@@ -131,7 +132,7 @@ Data is **automatically saved** in organized directories under `Faraday rotation
 **Example Data Structure:**
 ```plaintext
 📂 PME_measurements/
-├── 📂 Vapor_cell/
+├── 📂 XXX_cell/
 │   ├── 📂 Gaussmeter_data/
 │   │   ├── 📂 XX-XX-20XX
 │   │       ├── Gaussmeter_20XX-XX-XX.csv
@@ -178,8 +179,8 @@ Timestamp,X_1f,Y_1f,X_2f,Y_2f,X_DC,Y_DC,X_Mod,Y_Mod
 ---
 ## Future Enhancements 🚀
 This repository is **modular and expandable**. Future plans include:
-- 📊 **Machine learning models** for Faraday rotation analysis.
-- 🔄 **Support for additional instruments (e.g., Keysight, LakeShore DSP 275 Gaussmeter)**.
+- 📊 **Machine learning models** for real time magnetic field cancellation.
+- 🔄 **Support for additional instruments (e.g., Keysight)**.
 
 ---
 ## Contributions 🤝
