@@ -117,7 +117,7 @@ These scripts are optimized for:
 - Allows **harmonic, phase, and sensitivity settings**.
 - Supports **data buffer retrieval** for real-time measurements.
 
-### 🔬 **TOPTICA DLC Pro Tunable Diode Laser**
+### 💥 **TOPTICA DLC Pro Tunable Diode Laser**
 - **Full integration** with the TOPTICA SDK.
 - Supports **wide-scan control, triggering, and post measurement data acquisition**.
 
