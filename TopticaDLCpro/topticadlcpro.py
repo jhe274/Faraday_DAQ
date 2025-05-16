@@ -6,9 +6,6 @@ from toptica.lasersdk.utils.dlcpro import * # for extract_float_arrays(...)
 class LaserController(object):
     def __init__(self, port_number):
         self.serial_port = SerialConnection(port_number)                                    # Serial port number
-        with DLCpro(self.serial_port) as dlc:
-            print(dlc.uptime_txt.get())
-            print('Connection established to DLC pro with serial number ' + dlc.serial_number.get())
         """
         SC - Scan Control
         """
@@ -32,10 +29,6 @@ class LaserController(object):
             """
             try:
                 with DLCpro(self.serial_port) as dlc:
-                    sn = dlc.serial_number.get()
-                    health = dlc.system_health_txt.get()
-                    print('Connection established to DLC pro with serial number ' + sn)
-                    print('System health: ' + health)
                     dlc.laser2.wide_scan.stop()
                     dlc.laser2.wide_scan.output_channel.set(OutputChannel)                  # PC Voltage
                     dlc.laser2.scan.offset.set(ScanOffset)
@@ -54,7 +47,7 @@ class LaserController(object):
                     dlc.laser2.recorder.inputs.channel1.low_pass_filter.enabled.set(LPfilter)
                     dlc.laser2.recorder.inputs.channel1.low_pass_filter.cut_off_frequency.set(Ch1_CutOff)
                     dlc.laser2.recorder.inputs.channel2.low_pass_filter.cut_off_frequency.set(Ch2_CutOff)
-                    print('TOPTICA DLC pro successfully configured!')
+                    print('TOPTICA DLC pro successfully configured!\n')
             except DeviceNotFoundError as e:
                 sys.stderr.write('TOPTICA DLC pro not found: {}\n'.format(e))
 

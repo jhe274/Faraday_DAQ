@@ -37,7 +37,7 @@ class Main:
         self.b.calibration_method = 'TEMP'                                                      # 'TIME' or 'TEMP'
         self.delta_temp = 5                                                                     # Delta T = 0.5°C
         self.b.trigger_method = 'INT'                                                           # 'INT' or 'RISE' or 'FALL'
-        self.fram_rate = 100                                                                    # [Hz]
+        self.frame_rate = 100                                                                   # [Hz]
         self.aver_stat = 'OFF'                                                                  # 'ON' or 'OFF'
         self.aver_type = 'WAV'
         self.aver_coun = 20
@@ -47,34 +47,34 @@ class Main:
         self.dlcpro = LaserController(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
         self.ScanOffset = 86.0000                                                               # [V]
-        self.ScanStatus = False                                                                  # True -> Enable, False -> Disable
-        self.ScanAmplitude = 0.05                                                              # [V]
-        self.StartVoltage = self.ScanOffset - 10                                                 # [V]
-        self.EndVoltage = self.ScanOffset + 10                                                   # [V]
+        self.ScanStatus = False                                                                 # True -> Enable, False -> Disable
+        self.ScanAmplitude = 0.05                                                               # [V]
+        self.StartVoltage = self.ScanOffset - 10                                                # [V]
+        self.EndVoltage = self.ScanOffset + 10                                                  # [V]
         # self.StartVoltage = self.ScanOffset - 2                                                 # [V]
         # self.EndVoltage = self.ScanOffset + 2                                                   # [V]
         self.WideScanSpeed = 0.05                                                               # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.WideScanSpeed    # [s], (integer)
         self.WideScanShape = 0                                                                  # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
-        self.RecorderStepsize = self.WideScanSpeed * self.fram_rate                             # [V]
+        self.RecorderStepsize = self.WideScanSpeed * self.frame_rate                             # [V]
         self.Ch1 = 0                                                                            # 0 -> Fine in 1
         self.Ch2 = 54                                                                           # 54 -> Laser PD
         self.LPfilter = True                                                                    # True -> Enable, False -> Disable
-        self.Ch1_CutOff = 0.7 * self.fram_rate / 2
+        self.Ch1_CutOff = 0.7 * self.frame_rate / 2
         self.Ch2_CutOff = 4300
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": -118.84, "gain": 10, "sens": 10e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": -118.35, "gain": 10, "sens": 10e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": 16.26, "gain": 10, "sens": 2e-3, "TC": 100e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 17.55, "gain": 10, "sens": 20e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.91, "gain": 0, "sens": 1, "TC": 100e-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.54, "gain": 0, "sens": 1, "TC": 100e-3, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
@@ -103,7 +103,7 @@ class Main:
         """
         self.EXT_H = 0.1                                                                        # 100ms pulse
         self.EXT_L = 0.1                                                                        # send every 100ms
-        self.INT_peri = 1 / self.fram_rate                                                      # Bristol measurement period while using INTERNAL trigger
+        self.INT_peri = 1 / self.frame_rate                                                      # Bristol measurement period while using INTERNAL trigger
         self.EXT_peri = self.EXT_H + self.EXT_L                                                 # Bristol measurement period while using EXTERNAL trigger
         self.INT_NPeri = int(self.WideScanDuration / self.INT_peri)                             # Number of periods while using INTERNAL trigger
         self.EXT_NPeri = int(self.WideScanDuration / self.EXT_peri)                             # Number of periods while using EXTERNAL trigger
@@ -135,6 +135,11 @@ class Main:
 
     def config_DLCpro(self):
         """TOPTICA DLC pro"""
+        with DLCpro(SerialConnection(self.dlc_port)) as dlc:
+            print("System up time: " + dlc.uptime_txt.get())
+            print('Connection established to DLC pro with serial number ' + dlc.serial_number.get())
+            print('System health: ' + dlc.system_health_txt.get())
+        
         self.dlcpro.WideScan(self.OutputChannel, self.ScanStatus, self.ScanOffset, self.ScanAmplitude, 
                             self.StartVoltage, self.EndVoltage, self.WideScanSpeed, self.WideScanShape,
                             self.WideScanDuration, self.InputTrigger, self.RecorderStepsize,
@@ -150,6 +155,7 @@ class Main:
             self.b.calibration_temp(self.delta_temp)                                                  # Temperature delta = 0.5°C
             print('Trigger method =         ', self.b.trigger_method)
             if self.b.trigger_method == 'INT':
+                self.b.frame_rate = self.frame_rate
                 print('Frame rate =             ', self.b.frame_rate, 'Hz\n')
                 # print('Average method =         ', self.b.average_state(self.aver_stat))
                 # print('Average data type =      ', self.b.average_data(self.aver_type))
