@@ -19,7 +19,7 @@ cell_paths = {
     'Vivian': os.path.join(dir_path, 'Vivian')
 }
 
-cell_name = 'K_vapor'  # example usage
+cell_name = 'Rb_vapor'  # example usage
 if cell_name not in cell_paths:
     raise ValueError(f"Invalid cell name: {cell_name}")
 
@@ -74,15 +74,15 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.84, "gain": 0, "sens": 10e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 53.15, "gain": 0, "sens": 20e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": 17.55, "gain": 0, "sens": 20e-3, "TC": 100e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 17.03, "gain": 0, "sens": 100e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.95, "gain": 0, "sens": 1, "TC": 100e-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.56, "gain": 0, "sens": 1, "TC": 100e-3, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 

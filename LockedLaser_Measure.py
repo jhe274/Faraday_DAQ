@@ -10,12 +10,20 @@ from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 dir_path = os.path.join(os.path.expanduser('~'),
                         'Bruce',
                         'Faraday_rotation_measurements')
-K_vapor = os.path.join(dir_path, 'K_vapor_cell')
-Rb_vapor = os.path.join(dir_path, 'Rb_vapor_cell')
-# He3_Vivian = os.path.join(dir_path, 'Vivian')
-lockin_path = os.path.join(K_vapor, 'Lockins_data')
-wavelengthmeter_path = os.path.join(K_vapor, 'Wavelengthmeter_data')
-gaussmeter_path = os.path.join(K_vapor, 'Gaussmeter_data')
+cell_paths = {
+    'K_vapor': os.path.join(dir_path, 'K_vapor_cell'),
+    'Rb_vapor': os.path.join(dir_path, 'Rb_vapor_cell'),
+    'Vivian': os.path.join(dir_path, 'Vivian')
+}
+
+cell_name = 'K_vapor'  # example usage
+if cell_name not in cell_paths:
+    raise ValueError(f"Invalid cell name: {cell_name}")
+
+base_path = cell_paths[cell_name]
+lockin_path = os.path.join(base_path, 'Lockins_data')
+wavelengthmeter_path = os.path.join(base_path, 'Wavelengthmeter_data')
+gaussmeter_path = os.path.join(base_path, 'Gaussmeter_data')
 
 class Main:
     def __init__(self):
@@ -54,7 +62,7 @@ class Main:
 
             "M2f": {"gpib": 6, "harmonic": 1, "phase": -14.70, "gain": 0, "sens": 20e-3, "TC": 20, 
                     "coupling": True, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
+                   "reference": "external rear", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 20},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
@@ -124,9 +132,9 @@ class Main:
             print('Auto exposure =          ', self.b.auto_exposure)
             print('Calibration method =     ', self.b.calibration_method)
             self.b.calibration_timer(self.delta_t)
-            self.b.frame_rate =  self.frame_rate
             print('Trigger method =         ', self.b.trigger_method)
             if self.b.trigger_method == 'INT':
+                self.b.frame_rate = self.frame_rate
                 print('Frame rate =             ', self.b.frame_rate, 'Hz\n')
                 # print('Average method =         ', self.b.average_state(self.aver_stat))
                 # print('Average data type =      ', self.b.average_data(self.aver_type))
@@ -134,9 +142,9 @@ class Main:
             else:
                 print('Frame rate =             ', round(1/self.EXT_peri), 'Hz\n')
             self.b.calibrate()
-            print('Bristol wavelength meter successfully configured!\n')
+            print('Bristol wavelengthmeter successfully configured!\n')
         except Exception as e:
-            print('Bristol871 wavelength meter configuration failed: {}\n'.format(e))
+            print('Bristol871 wavelengthmeter configuration failed: {}\n'.format(e))
             sys.exit(1)
         
     def config_lock_ins(self):
