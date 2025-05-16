@@ -46,7 +46,7 @@ class Main:
         self.dlc_port = 'COM4'                                                                  # Serial port number
         self.dlcpro = LaserController(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
-        self.ScanOffset = 86.0000                                                               # [V]
+        self.ScanOffset = 76.0000                                                               # [V]
         self.ScanStatus = False                                                                 # True -> Enable, False -> Disable
         self.ScanAmplitude = 0.05                                                               # [V]
         self.StartVoltage = self.ScanOffset - 10                                                # [V]
@@ -66,11 +66,11 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": -118.35, "gain": 10, "sens": 10e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": -118.35, "gain": 0, "sens": 10e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": 17.55, "gain": 10, "sens": 20e-3, "TC": 100e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 17.55, "gain": 0, "sens": 20e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
