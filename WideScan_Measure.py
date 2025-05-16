@@ -13,13 +13,21 @@ import numpy as np
 dir_path = os.path.join(os.path.expanduser('~'),
                         'Bruce',
                         'Faraday_rotation_measurements')
-K_vapor = os.path.join(dir_path, 'K_vapor_cell')
-Rb_vapor = os.path.join(dir_path, 'Rb_vapor_cell')
-# Vivian = os.path.join(dir_path, 'Vivian')
-DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro_data')
-lockin_path = os.path.join(K_vapor, 'Lockins_data')
-wavelengthmeter_path = os.path.join(K_vapor, 'Wavelengthmeter_data')
-gaussmeter_path = os.path.join(K_vapor, 'Gaussmeter_data')
+cell_paths = {
+    'K_vapor': os.path.join(dir_path, 'K_vapor_cell'),
+    'Rb_vapor': os.path.join(dir_path, 'Rb_vapor_cell'),
+    'Vivian': os.path.join(dir_path, 'Vivian')
+}
+
+cell_name = 'K_vapor'  # example usage
+if cell_name not in cell_paths:
+    raise ValueError(f"Invalid cell name: {cell_name}")
+
+base_path = cell_paths[cell_name]
+DLCpro_path = os.path.join(base_path, 'TopticaDLCpro_data')
+lockin_path = os.path.join(base_path, 'Lockins_data')
+wavelengthmeter_path = os.path.join(base_path, 'Wavelengthmeter_data')
+gaussmeter_path = os.path.join(base_path, 'Gaussmeter_data')
 
 class Main:
     def __init__(self):
@@ -66,7 +74,7 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": -118.35, "gain": 0, "sens": 10e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.84, "gain": 0, "sens": 10e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
@@ -74,7 +82,7 @@ class Main:
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.54, "gain": 0, "sens": 1, "TC": 100e-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.95, "gain": 0, "sens": 1, "TC": 100e-3, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
