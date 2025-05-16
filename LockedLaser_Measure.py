@@ -7,9 +7,12 @@ from pymeasure.instruments.signalrecovery import DSP7265
 from Lakeshore475DSPGaussmeter.lakeshore475 import LakeShore475
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 
-dir_path = os.path.join(os.getcwd(), 'Faraday_rotation_measurements')
+dir_path = os.path.join(os.path.expanduser('~'),
+                        'Bruce',
+                        'Faraday_rotation_measurements')
 K_vapor = os.path.join(dir_path, 'K_vapor_cell')
-# Vivian = os.path.join(dir_path, 'Vivian')
+Rb_vapor = os.path.join(dir_path, 'Rb_vapor_cell')
+# He3_Vivian = os.path.join(dir_path, 'Vivian')
 lockin_path = os.path.join(K_vapor, 'Lockins_data')
 wavelengthmeter_path = os.path.join(K_vapor, 'Wavelengthmeter_data')
 gaussmeter_path = os.path.join(K_vapor, 'Gaussmeter_data')

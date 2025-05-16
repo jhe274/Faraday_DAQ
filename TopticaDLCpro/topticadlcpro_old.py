@@ -3,12 +3,10 @@ from time import strftime, localtime
 from toptica.lasersdk.dlcpro.v2_5_3 import DLCpro, SerialConnection, DeviceNotFoundError
 from toptica.lasersdk.utils.dlcpro import * # for extract_float_arrays(...)
 
-class LaserController(object):
+class Laser(object):
     def __init__(self, port_number):
         self.serial_port = SerialConnection(port_number)                                    # Serial port number
-        with DLCpro(self.serial_port) as dlc:
-            print(dlc.uptime_txt.get())
-            print('Connection established to DLC pro with serial number ' + dlc.serial_number.get())
+
         """
         SC - Scan Control
         """
@@ -36,24 +34,24 @@ class LaserController(object):
                     health = dlc.system_health_txt.get()
                     print('Connection established to DLC pro with serial number ' + sn)
                     print('System health: ' + health)
-                    dlc.laser2.wide_scan.stop()
-                    dlc.laser2.wide_scan.output_channel.set(OutputChannel)                  # PC Voltage
-                    dlc.laser2.scan.offset.set(ScanOffset)
-                    dlc.laser2.scan.amplitude.set(ScanAmplitude)
-                    dlc.laser2.scan.enabled.set(ScanStatus)
-                    dlc.laser2.wide_scan.shape.set(ScanShape)
-                    dlc.laser2.wide_scan._speed.set(ScanSpeed)
-                    dlc.laser2.wide_scan.duration.set(ScanDuration)
-                    dlc.laser2.wide_scan.scan_begin.set(StartVoltage)
-                    dlc.laser2.wide_scan.scan_end.set(EndVoltage)
-                    dlc.laser2.wide_scan.trigger.input_enabled.set(InputTrigger)            # True -> Enable, False -> Disable
-                    dlc.laser2.wide_scan.trigger.input_channel.set(2)                       # 2 -> Digital Input 2
-                    dlc.laser2.wide_scan.recorder_stepsize_set.set(RecorderStepsize)
-                    dlc.laser2.recorder.inputs.channel1.signal.set(Ch1)
-                    dlc.laser2.recorder.inputs.channel2.signal.set(Ch2)
-                    dlc.laser2.recorder.inputs.channel1.low_pass_filter.enabled.set(LPfilter)
-                    dlc.laser2.recorder.inputs.channel1.low_pass_filter.cut_off_frequency.set(Ch1_CutOff)
-                    dlc.laser2.recorder.inputs.channel2.low_pass_filter.cut_off_frequency.set(Ch2_CutOff)
+                    dlc.laser1.wide_scan.stop()
+                    dlc.laser1.wide_scan.output_channel.set(OutputChannel)                  # PC Voltage
+                    dlc.laser1.scan.offset.set(ScanOffset)
+                    dlc.laser1.scan.amplitude.set(ScanAmplitude)
+                    dlc.laser1.scan.enabled.set(ScanStatus)
+                    dlc.laser1.wide_scan.shape.set(ScanShape)
+                    dlc.laser1.wide_scan._speed.set(ScanSpeed)
+                    dlc.laser1.wide_scan.duration.set(ScanDuration)
+                    dlc.laser1.wide_scan.scan_begin.set(StartVoltage)
+                    dlc.laser1.wide_scan.scan_end.set(EndVoltage)
+                    dlc.laser1.wide_scan.trigger.input_enabled.set(InputTrigger)            # True -> Enable, False -> Disable
+                    dlc.laser1.wide_scan.trigger.input_channel.set(2)                       # 2 -> Digital Input 2
+                    dlc.laser1.wide_scan.recorder_stepsize_set.set(RecorderStepsize)
+                    dlc.laser1.recorder.inputs.channel1.signal.set(Ch1)
+                    dlc.laser1.recorder.inputs.channel2.signal.set(Ch2)
+                    dlc.laser1.recorder.inputs.channel1.low_pass_filter.enabled.set(LPfilter)
+                    dlc.laser1.recorder.inputs.channel1.low_pass_filter.cut_off_frequency.set(Ch1_CutOff)
+                    dlc.laser1.recorder.inputs.channel2.low_pass_filter.cut_off_frequency.set(Ch2_CutOff)
                     print('TOPTICA DLC pro successfully configured!')
             except DeviceNotFoundError as e:
                 sys.stderr.write('TOPTICA DLC pro not found: {}\n'.format(e))
@@ -155,6 +153,3 @@ class LaserController(object):
 
         except Exception as e:
             print(f"An error occurred while saving data to the file: {e}")
-
-# if __name__ == "__main__":
-#     laser = LaserController(port_number='COM4')

@@ -3,15 +3,18 @@ from time import time, sleep, perf_counter, strftime, localtime
 from datetime import datetime as dt
 import nidaqmx.system, nidaqmx.system.storage
 from toptica.lasersdk.dlcpro.v2_5_3 import DLCpro, SerialConnection, DeviceNotFoundError
-from TopticaDLCpro.topticadlcpro import Laser
+from TopticaDLCpro.topticadlcpro import LaserController
 from Bristol871.bristol_871A import Bristol871
 from Lakeshore475DSPGaussmeter.lakeshore475 import LakeShore475
 from pymeasure.instruments.signalrecovery import DSP7265
 from Thorlabs.TC300.TC300_COMMAND_LIB import TC300
 import numpy as np
 
-dir_path = os.path.join(os.getcwd(), 'Faraday_rotation_measurements')
+dir_path = os.path.join(os.path.expanduser('~'),
+                        'Bruce',
+                        'Faraday_rotation_measurements')
 K_vapor = os.path.join(dir_path, 'K_vapor_cell')
+Rb_vapor = os.path.join(dir_path, 'Rb_vapor_cell')
 # Vivian = os.path.join(dir_path, 'Vivian')
 DLCpro_path = os.path.join(K_vapor, 'TopticaDLCpro_data')
 lockin_path = os.path.join(K_vapor, 'Lockins_data')
@@ -40,17 +43,17 @@ class Main:
         self.aver_coun = 20
 
         """TOPTICA DLC pro"""
-        self.dlc_port = 'COM5'                                                                  # Serial port number
-        self.laser = Laser(self.dlc_port)
+        self.dlc_port = 'COM4'                                                                  # Serial port number
+        self.dlcpro = LaserController(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
-        self.ScanOffset = 53.3000                                                               # [V]
-        self.ScanStatus = True                                                                  # True -> Enable, False -> Disable
-        self.ScanAmplitude = 0.025                                                              # [V]
-        self.StartVoltage = self.ScanOffset - 5                                                 # [V]
-        self.EndVoltage = self.ScanOffset + 5                                                   # [V]
+        self.ScanOffset = 86.0000                                                               # [V]
+        self.ScanStatus = False                                                                  # True -> Enable, False -> Disable
+        self.ScanAmplitude = 0.05                                                              # [V]
+        self.StartVoltage = self.ScanOffset - 10                                                 # [V]
+        self.EndVoltage = self.ScanOffset + 10                                                   # [V]
         # self.StartVoltage = self.ScanOffset - 2                                                 # [V]
         # self.EndVoltage = self.ScanOffset + 2                                                   # [V]
-        self.WideScanSpeed = 0.025                                                               # [V/s]
+        self.WideScanSpeed = 0.05                                                               # [V/s]
         self.WideScanDuration = np.abs(self.StartVoltage-self.EndVoltage)/self.WideScanSpeed    # [s], (integer)
         self.WideScanShape = 0                                                                  # 0 -> Sawtooth, 1 -> Traingle
         self.InputTrigger = True                                                                # True -> Enable, False -> Disable
@@ -63,21 +66,21 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 52.35, "gain": 10, "sens": 2e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": -118.84, "gain": 10, "sens": 10e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": 15.53, "gain": 10, "sens": 50e-3, "TC": 5e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 16.26, "gain": 10, "sens": 2e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 0.06, "gain": 0, "sens": 500e-3, "TC": 100e-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.91, "gain": 0, "sens": 1, "TC": 100e-3, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
             "M2f": {"gpib": 6, "harmonic": 1, "phase": -82.51, "gain": 0, "sens": 100e-3, "TC": 100e-3, 
                     "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 0, "shield": 1, 
-                   "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
+                   "reference": "external rear", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
         }
 
         self.lockins = {name: DSP7265(settings["gpib"], f"{name} Lock-in Amplifier") for name, settings in lockin_settings.items()}
@@ -132,7 +135,7 @@ class Main:
 
     def config_DLCpro(self):
         """TOPTICA DLC pro"""
-        self.laser.WideScan(self.OutputChannel, self.ScanStatus, self.ScanOffset, self.ScanAmplitude, 
+        self.dlcpro.WideScan(self.OutputChannel, self.ScanStatus, self.ScanOffset, self.ScanAmplitude, 
                             self.StartVoltage, self.EndVoltage, self.WideScanSpeed, self.WideScanShape,
                             self.WideScanDuration, self.InputTrigger, self.RecorderStepsize,
                             self.Ch1, self.Ch2, self.LPfilter, self.Ch1_CutOff, self.Ch2_CutOff)
@@ -230,8 +233,8 @@ class Main:
             timestamps_before_rise = []
             timestamps_after_rise = []
             try:
-                with DLCpro(SerialConnection(self.dlc_port)) as dlcpro:
-                    dlcpro.laser1.wide_scan.start()
+                with DLCpro(SerialConnection(self.dlc_port)) as dlc:
+                    dlc.laser2.wide_scan.start()
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n=============== Wide Scan Initiated ===============")
@@ -259,9 +262,9 @@ class Main:
                     elap_time = perf_counter() - t0
                     task.write(self.triple_fall)
                     print("=============== Wide Scan Completed ===============")
-                    dlcpro.laser1.wide_scan.stop()
-                    result = self.laser.get_recorder_data(dlcpro.laser1)
-                    # self.laser.save_recorder_data(DLCpro_path, f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv', result)
+                    dlc.laser2.wide_scan.stop()
+                    # result = self.dlcpro.get_recorder_data(dlc.laser2)
+                    # self.dlcpro.save_recorder_data(DLCpro_path, f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv', result)
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
             print(f'{self.EXT_NPeri} periods of {self.EXT_peri} seconds')
@@ -285,8 +288,9 @@ class Main:
             i = 0
             b_timestamps, g_timestamps, fields, temps = [], [], [], []
             try:
-                with DLCpro(SerialConnection(self.dlc_port)) as dlcpro:
-                    dlcpro.laser1.wide_scan.start()
+                with DLCpro(SerialConnection(self.dlc_port)) as dlc:
+                    # dlcpro.laser1.wide_scan.start()
+                    dlc.laser2.wide_scan.start()
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
                     print("\n=============== Wide Scan Initiated ===============")
@@ -321,9 +325,9 @@ class Main:
                     elap_time = perf_counter() - t0
                     task.write(self.double_fall)
                     print("\n=============== Wide Scan Completed ===============")
-                    dlcpro.laser1.wide_scan.stop()
-                    # result = self.laser.get_recorder_data(dlcpro.laser1)
-                    # self.laser.save_recorder_data(DLCpro_path, f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv', result)
+                    dlc.laser2.wide_scan.stop()
+                    # result = self.dlcpro.get_recorder_data(dlc.laser2)
+                    # self.dlcpro.save_recorder_data(DLCpro_path, f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv', result)
             except DeviceNotFoundError:
                 sys.stderr.write('TOPTICA DLC pro not found')
             task.stop()
