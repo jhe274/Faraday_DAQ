@@ -54,7 +54,7 @@ class Main:
         self.dlc_port = 'COM4'                                                                  # Serial port number
         self.dlcpro = LaserController(self.dlc_port)
         self.OutputChannel = 50                                                                 # 51 -> CC, 50 -> PC, 57 -> TC
-        self.ScanOffset = 76.0000                                                               # [V]
+        self.ScanOffset = 79.0000                                                               # [V]
         self.ScanStatus = False                                                                 # True -> Enable, False -> Disable
         self.ScanAmplitude = 0.05                                                               # [V]
         self.StartVoltage = self.ScanOffset - 10                                                # [V]
@@ -74,19 +74,19 @@ class Main:
 
         """Signal Recovery DSP 7265 Lock-in Amplifiers"""
         lockin_settings = {
-            "1f": {"gpib": 7, "harmonic": 1, "phase": 53.15, "gain": 0, "sens": 20e-3, "TC": 100e-3, 
+            "1f": {"gpib": 7, "harmonic": 1, "phase": 0.05, "gain": 0, "sens": 10e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "2f": {"gpib": 8, "harmonic": 2, "phase": 17.03, "gain": 0, "sens": 100e-3, "TC": 100e-3, 
+            "2f": {"gpib": 8, "harmonic": 2, "phase": 0.30, "gain": 0, "sens": 2e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "DC": {"gpib": 9, "harmonic": 1, "phase": 1.56, "gain": 0, "sens": 1, "TC": 100e-3, 
+            "DC": {"gpib": 9, "harmonic": 1, "phase": 0.01, "gain": 0, "sens": 200e-3, "TC": 100e-3, 
                    "coupling": False, "vmode": 1, "imode": "voltage mode", "fet": 1, "shield": 1, 
                    "reference": "external front", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
 
-            "M2f": {"gpib": 6, "harmonic": 1, "phase": -82.51, "gain": 0, "sens": 100e-3, "TC": 100e-3, 
+            "M2f": {"gpib": 6, "harmonic": 1, "phase": 0.02, "gain": 0, "sens": 100e-3, "TC": 100e-3, 
                     "coupling": False, "vmode": 3, "imode": "voltage mode", "fet": 0, "shield": 1, 
                    "reference": "external rear", "slope": 24, "trigger_mode": 0, "length": 16384, "interval": 100e-3},
         }
@@ -130,6 +130,7 @@ class Main:
             if device.name == self.NI_channel:
                 device_found = True
                 try:
+                    print(f"Connected to: NI-cDAQ-9172 {self.NI_channel}")
                     device.reset_device()
                     device.self_test_device()
                     print(f'NI-cDAQ-9172 {self.NI_channel} Initialized.\n')
@@ -144,8 +145,8 @@ class Main:
     def config_DLCpro(self):
         """TOPTICA DLC pro"""
         with DLCpro(SerialConnection(self.dlc_port)) as dlc:
+            print(f'Connected to: {dlc.serial_number.get()}')
             print("System up time: " + dlc.uptime_txt.get())
-            print('Connection established to DLC pro with serial number ' + dlc.serial_number.get())
             print('System health: ' + dlc.system_health_txt.get())
         
         self.dlcpro.WideScan(self.OutputChannel, self.ScanStatus, self.ScanOffset, self.ScanAmplitude, 
@@ -156,7 +157,7 @@ class Main:
     def config_wavelengthmeter(self):
         """Bristol wavelenght meter, model 871A-VIS"""
         try:
-            
+            print('\n======================= Configure Bristol Wavelengthmeter 871A-VIS =======================')
             print('Detector type =          ', self.b.detector('CW'))                           # Detector type = CW
             print('Auto exposure =          ', self.b.auto_exposure)
             print('Calibration method =     ', self.b.calibration_method)
@@ -171,7 +172,7 @@ class Main:
             else:
                 print('Frame rate =             ', round(1/self.EXT_peri), 'Hz\n')
             self.b.calibrate()                                                                      # Calibrate Bristol before the measurement
-            print('Bristol wavelengthmeter successfully configured!\n')
+            print('==================== Bristol Wavelengthmeter Configuration Complete ======================')
         except Exception as e:
             print('Bristol871 wavelengthmeter configuration failed: {}\n'.format(e))
             sys.exit(1)
@@ -179,11 +180,13 @@ class Main:
     def config_gaussmeter(self):
         """Lakeshore 475 DSP Gaussmeter"""
         try:
+            print('\n========================= Configure Lakeshore 475 DSP Gaussmeter =========================')
             print(f'Self-Test Result =      ', self.g.self_test())
             self.g.set_mode("DC", "5 digits", "wide band", "periodic", "positive")
             print(f'Current mode =          ', self.g.mode)
             print(f'Auto Range =            ', self.g.auto)
             print(f'Current Units =         ', self.g.units)
+            print('================= Lakeshore 475 DSP Gaussmeter Configuration Complete ====================')
         except Exception as e:
             print('Lakeshore 475 DSP Gaussmeter configuration failed: {}\n'.format(e))
             sys.exit(1)
@@ -191,6 +194,7 @@ class Main:
     def config_lock_ins(self):
         """Configure all lock-ins using a loop."""
         try:
+            print('\n============================== Configure Lock-in Amplifiers ==============================')
             for name, lockin in self.lockins.items():
                 settings = self.lockin_settings[name]
 
@@ -210,12 +214,14 @@ class Main:
                 lockin.curve_buffer_triggered = settings["trigger_mode"]
 
                 print(f"{name} Lock-in Amplifier successfully configured!")
+            print('======================= Lock-in Amplifiers Configuration Complete ========================')
         except Exception as e:
             print(f"SR7265 Lock-in amplifier configuration failed: {e}")
             sys.exit(1)
     
     def init_buffer(self):
         """Initialize Bristol wavelength meter buffer"""
+        print('\n=========================== Initializing Instrument Buffers ===========================')
         try:
             self.b.buffer_control('INIT')                                                                   # Initilize buffer
             print('Bristol buffer initialized!\n')
@@ -229,10 +235,11 @@ class Main:
                 settings = self.lockin_settings[name]
                 lockin.set_buffer(points=settings["length"], quantities=None, interval=settings["interval"])
                 lockin.init_curve_buffer()
-            print("All lock-in buffers initialized!\n")
+            print("All lock-in buffers initialized!")
         except Exception as e:
             print(f"SR7265 Lock-in amplifier buffer initialization failed: {e}")
             sys.exit(1)
+        print('======================= Instrument Buffer Initialization Complete =======================')
 
     def EXT_trig_measure(self):
         """External trgiger mrthod for Bristol wavelength meter during measurements"""
@@ -251,7 +258,7 @@ class Main:
                     dlc.laser2.wide_scan.start()
                     print(f'Scan duration =          {int(self.WideScanDuration):4d}', 's')
                     self.countdown(5)
-                    print("\n=============== Wide Scan Initiated ===============")
+                    print("\n======================= Wide Scan Initiated =======================")
                     self.b.buffer_control('OPEN')
                     while i < self.EXT_NPeri:
                         if i == 0:
@@ -275,7 +282,7 @@ class Main:
                     self.b.buffer_control('CLOS')
                     elap_time = perf_counter() - t0
                     task.write(self.triple_fall)
-                    print("=============== Wide Scan Completed ===============")
+                    print("======================= Wide Scan Completed =======================")
                     dlc.laser2.wide_scan.stop()
                     # result = self.dlcpro.get_recorder_data(dlc.laser2)
                     # self.dlcpro.save_recorder_data(DLCpro_path, f'DLCpro_WideScan_{dt.now().strftime("%Y-%m-%d")}.csv', result)

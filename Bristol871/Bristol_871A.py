@@ -42,7 +42,7 @@ class Bristol871(object):
 
             if not quiet:
                 self.tn.write(b"*IDN?\r\n")
-                print(self.readline(), "\n")
+                print(f"Connected to: {self.readline()}", "\n")
         except Exception as e:
             print(f"Error initializing Bristol 871: {e}")
             self.__del__()

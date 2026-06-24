@@ -17,7 +17,8 @@ import os
 
 port_number = 'COM6'
 cwd = os.getcwd()
-dir_path = os.path.join(cwd, 'Faraday rotation measurements', 'Data_acquisition', 'FR_DAQ', 'Bristol871')
+dir_path = os.path.join(cwd, 'Bristol871')
+print(dir_path)
 output_file = os.path.join(dir_path, 'test_log.csv')
 
 # Connect to the instrument
